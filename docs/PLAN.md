@@ -90,8 +90,19 @@ Source of truth: `supabase/migrations/`. Summary:
 
 ## Rule enforcement
 
-1. `src/lib/rules/` — pure TypeScript `validatePick()` and `scorePick()`, unit-tested with Vitest. Used
-   by both the UI (to grey out ineligible players) and Server Actions (before writing).
+1. `src/lib/rules/` — pure TypeScript, no I/O, unit-tested with Vitest (`npm test`, 59 tests). Used by
+   both the UI (to grey out ineligible players) and Server Actions (before writing).
+   - `validatePick(candidate, ctx)` returns *every* violation (codes like `already_used`, `favored`,
+     `lower_division_opponent`), not just the first, so the UI can explain all of them.
+   - `scoreBreakdown` / `scoreStatLine`: per-category truncation toward zero.
+   - `resolvePick`: pending → locked → final/dnp. **A final game with no box-score row is burned with
+     0 points and flagged for review, not released.** Releasing by default would let the player be
+     re-picked, and a later "he did play" would then break single use retroactively. Confirming the DNP
+     (manual stats row, `appeared = false`) releases him.
+   - `underdogStatus`: from the team's side, spread < 0 is favored; 0 (pick'em) or positive is an
+     underdog; no line while facing a higher division is an underdog; otherwise unknown (enter a line).
+   - `chooseSpread`: manual line, then DraftKings, ESPN Bet, Bovada, then any.
+   - `lockAt`: mirrors the DB's `game_lock_at`.
 2. Postgres constraints and triggers — lock at kickoff, single use, one pick per slot.
 3. Row Level Security on every table. In Phase 1 only server code (secret key) touches the database.
 
@@ -109,7 +120,7 @@ players and writes picks with lock checks bypassed for historical imports.
 | 1 | Scaffold: Next.js 16, Tailwind 4, shadcn/ui, Supabase client, Vercel deploy, status page | ✅ done — live at https://college-pickem-phi.vercel.app |
 | 2 | Schema: migrations, seed, generated types, RLS on | ✅ done |
 | 3 | Reference sync: teams, games, rosters, lines + admin "Sync now" | ✅ done |
-| 4 | Rules engine + Vitest tests | |
+| 4 | Rules engine + Vitest tests | ✅ done |
 | 5 | Picks UI: week view, eligible-player search, lock countdown, Server Actions, lock trigger | |
 | 6 | Stats sync + scoring + DNP review queue + history / burned list | |
 | 7 | Manual overrides admin | |
