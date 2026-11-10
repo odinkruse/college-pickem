@@ -1,17 +1,21 @@
 import "server-only";
 import { newUsage } from "@/lib/cfbd";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { syncGames, syncLines, syncRosters, syncTeams, type SyncContext, type SyncSummary } from "./cfbd-sync";
 import { must } from "@/lib/supabase/helpers";
+import { syncGames, syncLines, syncResults, syncRosters, syncTeams, type SyncContext, type SyncSummary } from "./cfbd-sync";
 
+/** Whole-season reference syncs, in dependency order ("Sync everything" runs these). */
 export const SYNC_KINDS = ["teams", "games", "rosters", "lines"] as const;
-export type SyncKind = (typeof SYNC_KINDS)[number];
+/** Every sync, including the per-week results sync. */
+export const ALL_SYNC_KINDS = [...SYNC_KINDS, "results"] as const;
+export type SyncKind = (typeof ALL_SYNC_KINDS)[number];
 
 const SYNCS: Record<SyncKind, (ctx: SyncContext) => Promise<SyncSummary>> = {
   teams: syncTeams,
   games: syncGames,
   rosters: syncRosters,
   lines: syncLines,
+  results: syncResults,
 };
 
 export type SyncResult =
@@ -20,23 +24,25 @@ export type SyncResult =
 
 /**
  * Runs one sync and records it in sync_runs (start, finish, CFBD calls used, quota left).
- * Never throws: failures come back as `{ ok: false }` and are logged on the run row.
+ * `week` is required for "results" and ignored otherwise. Never throws: failures come back
+ * as `{ ok: false }` and are logged on the run row.
  */
-export async function runSync(kind: SyncKind, year: number): Promise<SyncResult> {
+export async function runSync(kind: SyncKind, year: number, week?: number): Promise<SyncResult> {
   const db = createAdminClient();
   const usage = newUsage();
+  const runWeek = kind === "results" ? week : undefined;
 
   const season = must(
     await db.from("seasons").upsert({ year }, { onConflict: "year" }).select("id").single(),
     "ensure season",
   );
   const run = must(
-    await db.from("sync_runs").insert({ kind, season_year: year }).select("id").single(),
+    await db.from("sync_runs").insert({ kind, season_year: year, week: runWeek ?? null }).select("id").single(),
     "start sync run",
   );
 
   try {
-    const summary = await SYNCS[kind]({ db, year, seasonId: season.id, usage });
+    const summary = await SYNCS[kind]({ db, year, seasonId: season.id, usage, week: runWeek });
     await db
       .from("sync_runs")
       .update({

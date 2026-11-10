@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  fetchBoxScores,
   fetchGames,
   fetchLines,
   fetchRosters,
@@ -8,11 +9,14 @@ import {
   type CfbdGame,
   type CfbdUsage,
 } from "@/lib/cfbd";
+import { scoreWeek } from "@/lib/picks/scoring";
+import { parseBoxScores, type ParsedLine } from "./box-score";
 import type { Database, TablesInsert } from "@/lib/supabase/database.types";
 import { chunks, dedupeBy, must, ok, selectAll } from "@/lib/supabase/helpers";
 
 type Db = SupabaseClient<Database>;
-export type SyncContext = { db: Db; year: number; seasonId: number; usage: CfbdUsage };
+/** `week` limits games to one week and is required for the results sync. */
+export type SyncContext = { db: Db; year: number; seasonId: number; usage: CfbdUsage; week?: number };
 export type SyncSummary = Record<string, number | string>;
 
 /** Roster positions worth storing: anything that could fill a QB, RB or WR/TE slot. Null = unlisted. */
@@ -69,11 +73,11 @@ export async function syncTeams({ db, year, seasonId, usage }: SyncContext): Pro
 // Games (2 CFBD calls: FBS and FCS lists; FBS-vs-FCS games appear in both)
 // ---------------------------------------------------------------------------
 
-export async function syncGames({ db, year, seasonId, usage }: SyncContext): Promise<SyncSummary> {
+export async function syncGames({ db, year, seasonId, usage, week }: SyncContext): Promise<SyncSummary> {
   const teamIds = await loadTeamIds(db);
   if (teamIds.size === 0) throw new Error("No teams yet. Sync teams first.");
 
-  const [fbs, fcs] = await Promise.all([fetchGames(year, "fbs", usage), fetchGames(year, "fcs", usage)]);
+  const [fbs, fcs] = await Promise.all([fetchGames(year, "fbs", usage, week), fetchGames(year, "fcs", usage, week)]);
   const games = dedupeBy([...fbs, ...fcs], (g) => g.id).filter((g) => g.season === year);
 
   // An opponent CFBD's /teams didn't list (rare): create a bare team so the game can be stored.
@@ -236,6 +240,109 @@ export async function syncLines({ db, year, seasonId, usage }: SyncContext): Pro
     lines: rows.length,
     gamesWithLines: new Set(rows.map((r) => r.game_id)).size,
     unmatchedGames: lines.filter((g) => !gameId.has(g.id)).length,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Weekly results (4 CFBD calls): the week's games + FBS and FCS box scores, then scoring.
+// ---------------------------------------------------------------------------
+
+export async function syncResults(ctx: SyncContext): Promise<SyncSummary> {
+  const { db, year, seasonId, usage, week } = ctx;
+  if (week === undefined) throw new Error("The results sync needs a week.");
+
+  const gamesSummary = await syncGames(ctx); // fresh scores, completed flags, kickoff changes
+
+  const weekGames = must(
+    await db
+      .from("games")
+      .select("id, cfbd_id, home_team_id, away_team_id")
+      .eq("season_id", seasonId)
+      .eq("season_type", "regular")
+      .eq("week", week),
+    "load week games",
+  );
+  const gameByCfbd = new Map(weekGames.map((g) => [g.cfbd_id, g]));
+
+  const [fbs, fcs] = await Promise.all([
+    fetchBoxScores(year, week, "fbs", usage),
+    fetchBoxScores(year, week, "fcs", usage),
+  ]);
+  const boxScores = dedupeBy([...fbs, ...fcs], (b) => b.id).filter((b) => gameByCfbd.has(b.id));
+  const lines = parseBoxScores(boxScores);
+
+  // Map CFBD athlete ids to players; create any the roster sync didn't have (no position, so they
+  // only become pickable after a position override).
+  const playerIds = new Map<number, number>();
+  for (const batch of chunks([...new Set(lines.map((l) => l.cfbdPlayerId))], 300)) {
+    for (const p of must(await db.from("players").select("id, cfbd_id").in("cfbd_id", batch), "load players")) {
+      playerIds.set(p.cfbd_id!, p.id);
+    }
+  }
+  const missing = dedupeBy(lines.filter((l) => !playerIds.has(l.cfbdPlayerId)), (l) => l.cfbdPlayerId);
+  for (const batch of chunks(missing)) {
+    const created = must(
+      await db
+        .from("players")
+        .upsert(batch.map((l) => ({ cfbd_id: l.cfbdPlayerId, name: l.name, source: "cfbd" as const })), { onConflict: "cfbd_id" })
+        .select("id, cfbd_id"),
+      "create players",
+    );
+    for (const p of created) playerIds.set(p.cfbd_id!, p.id);
+    const teamOf = (l: ParsedLine) => {
+      const g = gameByCfbd.get(l.cfbdGameId)!;
+      return l.side === "home" ? g.home_team_id : g.away_team_id;
+    };
+    ok(
+      await db.from("player_seasons").upsert(
+        batch.map((l) => ({ player_id: playerIds.get(l.cfbdPlayerId)!, season_id: seasonId, team_id: teamOf(l), position: null })),
+        { onConflict: "player_id,season_id", ignoreDuplicates: true },
+      ),
+      "create player seasons",
+    );
+  }
+
+  // Hand-entered rows win: leave them out of the upsert entirely.
+  const manual = must(
+    await db
+      .from("player_game_stats")
+      .select("player_id, game_id")
+      .eq("source", "manual")
+      .in("game_id", weekGames.map((g) => g.id)),
+    "load manual stats",
+  );
+  const manualKeys = new Set(manual.map((m) => `${m.player_id}|${m.game_id}`));
+
+  const rows: TablesInsert<"player_game_stats">[] = lines
+    .map((l) => {
+      const g = gameByCfbd.get(l.cfbdGameId)!;
+      return {
+        player_id: playerIds.get(l.cfbdPlayerId)!,
+        game_id: g.id,
+        team_id: l.side === "home" ? g.home_team_id : g.away_team_id,
+        ...l.stats,
+        appeared: true,
+        source: "cfbd" as const,
+      };
+    })
+    .filter((r) => !manualKeys.has(`${r.player_id}|${r.game_id}`));
+
+  for (const batch of chunks(rows, 1000)) {
+    ok(await db.from("player_game_stats").upsert(batch, { onConflict: "player_id,game_id" }), "upsert stats");
+  }
+
+  const scored = await scoreWeek(db, seasonId, week);
+  if (scored.failed.length) throw new Error(`Scoring failed for ${scored.failed.length} pick(s): ${scored.failed.join("; ")}`);
+
+  return {
+    games: gamesSummary.games,
+    completed: gamesSummary.completed,
+    boxScores: boxScores.length,
+    statLines: rows.length,
+    keptManual: manualKeys.size,
+    playersCreated: missing.length,
+    picksScored: scored.final + scored.dnp,
+    needsReview: scored.needsReview,
   };
 }
 

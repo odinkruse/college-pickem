@@ -55,7 +55,14 @@ Code: `src/lib/sync/`. Run from `/admin` (password: `ADMIN_PASSWORD`, any userna
 | rosters | 1 (`/roster?year`, all teams, ~9 MB) | FBS/FCS teams only; positions QB/RB/FB/WR/TE/ATH/unlisted. Roster ids match box-score athlete ids (100% in the week 10 test). Never touches `position_override`. |
 | lines | 1 (`/lines?year`, whole season) | Upsert by (game, provider); manual lines use provider `manual` so sync never collides. |
 
+| results (per week) | 4 (`/games` fbs+fcs for the week, `/games/players` fbs+fcs) | Refreshes the week's games, upserts box-score stat lines (skipping `source = 'manual'` rows), creates players missing from rosters (no position), then `scoreWeek` rescores every pick that week. `npm run sync -- results 2026 10`. |
+
 First 2026 sync: 682 teams, 1,608 games, 9,322 skill players, 2,041 lines, ~16 s total.
+Week 10 results: 124 box scores, 2,526 stat lines, 8.6 s.
+
+Scoring lives in `src/lib/picks/scoring.ts`: `scoreWeek` (no CFBD calls; only writes changed picks) and
+`resolveReview` (records a manual stats row: appeared = false → DNP/released, true → burned at 0).
+Box-score parsing is the pure `src/lib/sync/box-score.ts` (unit-tested).
 Re-running is idempotent. Includes 46 FCS-vs-D-II games, which the division rule must reject.
 
 ## Data model
@@ -122,7 +129,7 @@ players and writes picks with lock checks bypassed for historical imports.
 | 3 | Reference sync: teams, games, rosters, lines + admin "Sync now" | ✅ done |
 | 4 | Rules engine + Vitest tests | ✅ done |
 | 5 | Picks UI: week view, eligible-player search, lock countdown, Server Actions, lock trigger | ✅ done — `/picks` (password-protected like `/admin`) |
-| 6 | Stats sync + scoring + DNP review queue + history / burned list | |
+| 6 | Stats sync + scoring + DNP review queue + history / burned list | ✅ done — results sync (4 calls/week), `/admin` review list, `/picks/season` |
 | 7 | Manual overrides admin | |
 | 8 | League pick import (Josh's sheet / email) + standings — backfill 2026 for testing | |
 | 9 | Scheduling: Supabase `pg_cron` → sync endpoint (Vercel Hobby cron is daily only) | |

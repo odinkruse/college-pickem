@@ -110,6 +110,23 @@ export type CfbdGameLines = {
   lines: { provider: string; spread: number | null; spreadOpen: number | null }[];
 };
 
+/**
+ * One game's box score. Stats are strings ("112", "-3", "12/20"). Athlete ids starting with "-"
+ * are team-total rows. Categories include passing (YDS, TD, INT), rushing (YDS, TD),
+ * receiving (YDS, TD), fumbles (FUM, LOST, REC), plus defense and special teams we ignore.
+ */
+export type CfbdBoxScore = {
+  id: number; // CFBD game id
+  teams: {
+    team: string;
+    homeAway: "home" | "away";
+    categories: {
+      name: string;
+      types: { name: string; athletes: { id: string; name: string; stat: string }[] }[];
+    }[];
+  }[];
+};
+
 // ---------------------------------------------------------------------------
 // Endpoints
 // ---------------------------------------------------------------------------
@@ -125,9 +142,13 @@ export async function getCalendar(year: number): Promise<CalendarWeek[]> {
 export const fetchTeams = (year: number, usage?: CfbdUsage) =>
   cfbdFetch<CfbdTeam[]>("/teams", { year }, usage);
 
-/** Regular-season games involving at least one team of the given classification. */
-export const fetchGames = (year: number, classification: CfbdClassification, usage?: CfbdUsage) =>
-  cfbdFetch<CfbdGame[]>("/games", { year, classification, seasonType: "regular" }, usage);
+/** Regular-season games involving at least one team of the given classification (one week, or all). */
+export const fetchGames = (year: number, classification: CfbdClassification, usage?: CfbdUsage, week?: number) =>
+  cfbdFetch<CfbdGame[]>("/games", { year, week, classification, seasonType: "regular" }, usage);
+
+/** Box-score player stats for one week, for games involving the given classification. */
+export const fetchBoxScores = (year: number, week: number, classification: CfbdClassification, usage?: CfbdUsage) =>
+  cfbdFetch<CfbdBoxScore[]>("/games/players", { year, week, classification, seasonType: "regular" }, usage);
 
 /** Every roster in one call (~30k players, ~9 MB). */
 export const fetchRosters = (year: number, usage?: CfbdUsage) =>

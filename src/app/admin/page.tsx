@@ -4,9 +4,13 @@ import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { seasonYearFor } from "@/lib/cfbd";
+import { seasonWeeks } from "@/lib/season";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { SYNC_KINDS } from "@/lib/sync/run";
+import { ALL_SYNC_KINDS } from "@/lib/sync/run";
+import { ReviewButtons } from "./review-item";
 import { SyncPanel } from "./sync-panel";
+
+const SLOT_LABEL = { QB: "QB", RB: "RB", WRTE: "WR/TE" } as const;
 
 // /admin is behind the password prompt in src/proxy.ts.
 export default function AdminPage(props: PageProps<"/admin">) {
@@ -39,7 +43,7 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
   const seasonId = season?.id ?? -1;
   const count = async (query: PromiseLike<{ count: number | null }>) => (await query).count ?? 0;
 
-  const [fbsTeams, fcsTeams, games, completed, players, lines, runsResult, quotaResult] = await Promise.all([
+  const [fbsTeams, fcsTeams, games, completed, players, lines, runsResult, quotaResult, reviewResult, { weeks, current }] = await Promise.all([
     count(db.from("team_seasons").select("*", { count: "exact", head: true }).eq("season_id", seasonId).eq("classification", "fbs")),
     count(db.from("team_seasons").select("*", { count: "exact", head: true }).eq("season_id", seasonId).eq("classification", "fcs")),
     count(db.from("games").select("*", { count: "exact", head: true }).eq("season_id", seasonId)),
@@ -53,7 +57,7 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
     ),
     db
       .from("sync_runs")
-      .select("kind, status, finished_at, started_at, summary, error")
+      .select("kind, week, status, finished_at, started_at, summary, error")
       .eq("season_year", year)
       .order("started_at", { ascending: false })
       .limit(40),
@@ -64,10 +68,18 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
       .order("started_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    db
+      .from("picks")
+      .select("id, week, slot, review_reason, players(name), teams(school), entries!inner(season_id, profiles(display_name))")
+      .eq("entries.season_id", seasonId)
+      .not("review_reason", "is", null)
+      .order("week"),
+    seasonWeeks(year, new Date()),
   ]);
 
   const runs = runsResult.data ?? [];
-  const lastRun = Object.fromEntries(SYNC_KINDS.map((kind) => [kind, runs.find((r) => r.kind === kind) ?? null]));
+  const lastRun = Object.fromEntries(ALL_SYNC_KINDS.map((kind) => [kind, runs.find((r) => r.kind === kind) ?? null]));
+  const reviews = reviewResult.data ?? [];
   const quota = quotaResult.data;
 
   const stats = [
@@ -121,18 +133,52 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
 
       <Card>
         <CardHeader>
+          <CardTitle>Needs review {reviews.length > 0 && <Badge variant="destructive">{reviews.length}</Badge>}</CardTitle>
+          <CardDescription>
+            Picked players with no box-score line. They count as used with 0 points until you decide. &ldquo;Didn&apos;t
+            play&rdquo; (zero snaps) releases them to be picked again.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {reviews.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing to review.</p>
+          ) : (
+            <ul className="flex flex-col divide-y">
+              {reviews.map((r) => (
+                <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <div className="min-w-0 text-sm">
+                    <div className="font-medium">
+                      {r.players.name} <span className="text-muted-foreground">· {r.teams.school}</span>
+                    </div>
+                    <div className="text-muted-foreground">
+                      Week {r.week} {SLOT_LABEL[r.slot]} · {r.entries.profiles.display_name}
+                    </div>
+                  </div>
+                  <ReviewButtons pickId={r.id} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Sync from CollegeFootballData</CardTitle>
           <CardDescription>Re-running is safe: rows are updated in place, and hand-entered data is never overwritten.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          <SyncPanel season={year} />
+          <SyncPanel season={year} weeks={weeks} currentWeek={current} />
           <div className="flex flex-col divide-y text-sm">
-            {SYNC_KINDS.map((kind) => {
+            {ALL_SYNC_KINDS.map((kind) => {
               const run = lastRun[kind];
               return (
                 <div key={kind} className="flex items-start justify-between gap-4 py-2">
                   <div className="min-w-0">
-                    <div className="font-medium capitalize">{kind}</div>
+                    <div className="font-medium capitalize">
+                      {kind}
+                      {kind === "results" && run?.week != null && <span className="font-normal text-muted-foreground"> · week {run.week}</span>}
+                    </div>
                     <div className="break-words text-muted-foreground">
                       {!run
                         ? "Never synced"

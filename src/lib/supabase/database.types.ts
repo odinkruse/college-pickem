@@ -76,6 +76,13 @@ export type Database = {
             referencedColumns: ["league_id", "profile_id"]
           },
           {
+            foreignKeyName: "entries_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "entries_season_id_fkey"
             columns: ["season_id"]
             isOneToOne: false
@@ -577,6 +584,7 @@ export type Database = {
           started_at: string
           status: string
           summary: Json | null
+          week: number | null
         }
         Insert: {
           cfbd_calls?: number
@@ -589,6 +597,7 @@ export type Database = {
           started_at?: string
           status?: string
           summary?: Json | null
+          week?: number | null
         }
         Update: {
           cfbd_calls?: number
@@ -601,6 +610,7 @@ export type Database = {
           started_at?: string
           status?: string
           summary?: Json | null
+          week?: number | null
         }
         Relationships: []
       }

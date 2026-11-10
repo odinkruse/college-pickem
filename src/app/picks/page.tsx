@@ -4,9 +4,10 @@ import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LockTime } from "@/components/time";
-import { findCurrentWeek, getCalendar, seasonYearFor } from "@/lib/cfbd";
+import { seasonYearFor } from "@/lib/cfbd";
 import { loadWeekContext, pickWarnings, teamSpread, type SeasonPick, type WeekContext } from "@/lib/picks/service";
 import type { Slot } from "@/lib/rules";
+import { seasonWeeks } from "@/lib/season";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { RemovePickButton, WeekRuleSelect } from "./controls";
 import { formatSpread, RULE_HINT, SLOT_LABEL } from "./format";
@@ -24,19 +25,6 @@ export default function PicksPage(props: PageProps<"/picks">) {
 }
 
 const SLOTS: Slot[] = ["QB", "RB", "WRTE"];
-
-/** Regular-season weeks and the default (current) week, from CFBD's cached calendar. */
-async function seasonWeeks(year: number, now: Date) {
-  try {
-    const calendar = await getCalendar(year);
-    const weeks = calendar.filter((w) => w.seasonType === "regular").map((w) => w.week);
-    const current = findCurrentWeek(calendar, now);
-    const fallback = weeks.at(-1) ?? 1;
-    return { weeks, current: current?.seasonType === "regular" ? current.week : fallback };
-  } catch {
-    return { weeks: Array.from({ length: 15 }, (_, i) => i + 1), current: 1 };
-  }
-}
 
 async function PicksWeek({ searchParams }: { searchParams: PageProps<"/picks">["searchParams"] }) {
   await connection();
