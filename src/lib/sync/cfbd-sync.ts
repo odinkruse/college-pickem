@@ -9,7 +9,7 @@ import {
   type CfbdUsage,
 } from "@/lib/cfbd";
 import type { Database, TablesInsert } from "@/lib/supabase/database.types";
-import { chunks, dedupeBy, must, ok, selectAll } from "./db-helpers";
+import { chunks, dedupeBy, must, ok, selectAll } from "@/lib/supabase/helpers";
 
 type Db = SupabaseClient<Database>;
 export type SyncContext = { db: Db; year: number; seasonId: number; usage: CfbdUsage };

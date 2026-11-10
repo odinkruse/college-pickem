@@ -2,7 +2,7 @@ import "server-only";
 import { newUsage } from "@/lib/cfbd";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncGames, syncLines, syncRosters, syncTeams, type SyncContext, type SyncSummary } from "./cfbd-sync";
-import { must } from "./db-helpers";
+import { must } from "@/lib/supabase/helpers";
 
 export const SYNC_KINDS = ["teams", "games", "rosters", "lines"] as const;
 export type SyncKind = (typeof SYNC_KINDS)[number];

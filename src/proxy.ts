@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isAdminAuthorization } from "@/lib/admin-auth";
 
 // Proxy (Next 16's new name for middleware) runs before matching requests reach the app.
-// Here it puts a browser password prompt in front of everything under /admin.
+// Here it puts a browser password prompt in front of /admin and /picks (Phase 1: one player,
+// no login; anyone with the URL could otherwise make picks as the owner).
 export function proxy(request: NextRequest) {
   if (isAdminAuthorization(request.headers.get("authorization"))) {
     return NextResponse.next();
@@ -15,5 +16,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*"],
+  matcher: ["/admin", "/admin/:path*", "/picks", "/picks/:path*"],
 };

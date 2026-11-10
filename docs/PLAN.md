@@ -121,7 +121,7 @@ players and writes picks with lock checks bypassed for historical imports.
 | 2 | Schema: migrations, seed, generated types, RLS on | ✅ done |
 | 3 | Reference sync: teams, games, rosters, lines + admin "Sync now" | ✅ done |
 | 4 | Rules engine + Vitest tests | ✅ done |
-| 5 | Picks UI: week view, eligible-player search, lock countdown, Server Actions, lock trigger | |
+| 5 | Picks UI: week view, eligible-player search, lock countdown, Server Actions, lock trigger | ✅ done — `/picks` (password-protected like `/admin`) |
 | 6 | Stats sync + scoring + DNP review queue + history / burned list | |
 | 7 | Manual overrides admin | |
 | 8 | League pick import (Josh's sheet / email) + standings — backfill 2026 for testing | |
