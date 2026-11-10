@@ -14,6 +14,11 @@ export class CfbdError extends Error {
   }
 }
 
+/** Mutable tally a caller passes in to count calls and capture the quota left. */
+export type CfbdUsage = { calls: number; remaining: number | null };
+
+export const newUsage = (): CfbdUsage => ({ calls: 0, remaining: null });
+
 /**
  * Low-level CFBD request. Every call counts against the monthly quota
  * (1,000 on the free tier), so callers should cache results or persist them
@@ -22,6 +27,7 @@ export class CfbdError extends Error {
 export async function cfbdFetch<T>(
   path: string,
   params: Record<string, string | number | undefined> = {},
+  usage?: CfbdUsage,
 ): Promise<T> {
   const url = new URL(path, BASE_URL);
   for (const [key, value] of Object.entries(params)) {
@@ -33,11 +39,22 @@ export async function cfbdFetch<T>(
       Accept: "application/json",
     },
   });
+  if (usage) {
+    usage.calls += 1;
+    const remaining = res.headers.get("x-calllimit-remaining");
+    if (remaining !== null) usage.remaining = Number(remaining);
+  }
   if (!res.ok) {
     throw new CfbdError(res.status, `CFBD ${url.pathname} failed: ${res.status} ${res.statusText}`);
   }
   return (await res.json()) as T;
 }
+
+// ---------------------------------------------------------------------------
+// Response shapes (only the fields this app uses)
+// ---------------------------------------------------------------------------
+
+export type CfbdClassification = "fbs" | "fcs" | "ii" | "iii";
 
 export type CalendarWeek = {
   season: number;
@@ -47,12 +64,82 @@ export type CalendarWeek = {
   endDate: string;
 };
 
+export type CfbdTeam = {
+  id: number;
+  school: string;
+  mascot: string | null;
+  abbreviation: string | null;
+  conference: string | null;
+  classification: CfbdClassification | null;
+  logos: string[] | null;
+};
+
+export type CfbdGame = {
+  id: number;
+  season: number;
+  week: number;
+  seasonType: "regular" | "postseason";
+  startDate: string;
+  startTimeTBD: boolean;
+  completed: boolean;
+  neutralSite: boolean;
+  conferenceGame: boolean;
+  homeId: number;
+  homeTeam: string;
+  homeClassification: CfbdClassification | null;
+  homeConference: string | null;
+  homePoints: number | null;
+  awayId: number;
+  awayTeam: string;
+  awayClassification: CfbdClassification | null;
+  awayConference: string | null;
+  awayPoints: number | null;
+};
+
+export type CfbdRosterPlayer = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  team: string; // school name, not id
+  jersey: number | null;
+  position: string | null;
+};
+
+export type CfbdGameLines = {
+  id: number; // CFBD game id
+  lines: { provider: string; spread: number | null; spreadOpen: number | null }[];
+};
+
+// ---------------------------------------------------------------------------
+// Endpoints
+// ---------------------------------------------------------------------------
+
 /** Season calendar. Changes rarely, so it is cached for days (one CFBD call per season per day at most). */
 export async function getCalendar(year: number): Promise<CalendarWeek[]> {
   "use cache";
   cacheLife("days");
   return cfbdFetch<CalendarWeek[]>("/calendar", { year });
 }
+
+/** All teams in every division (~680), with conference and classification for that season. */
+export const fetchTeams = (year: number, usage?: CfbdUsage) =>
+  cfbdFetch<CfbdTeam[]>("/teams", { year }, usage);
+
+/** Regular-season games involving at least one team of the given classification. */
+export const fetchGames = (year: number, classification: CfbdClassification, usage?: CfbdUsage) =>
+  cfbdFetch<CfbdGame[]>("/games", { year, classification, seasonType: "regular" }, usage);
+
+/** Every roster in one call (~30k players, ~9 MB). */
+export const fetchRosters = (year: number, usage?: CfbdUsage) =>
+  cfbdFetch<CfbdRosterPlayer[]>("/roster", { year }, usage);
+
+/** Betting lines for the whole regular season, FBS and FCS. Spread is from the home team's side. */
+export const fetchLines = (year: number, usage?: CfbdUsage) =>
+  cfbdFetch<CfbdGameLines[]>("/lines", { year, seasonType: "regular" }, usage);
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 /** CFBD seasons are named by the year they start; January and February belong to the previous season. */
 export function seasonYearFor(now: Date): number {

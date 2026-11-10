@@ -565,6 +565,45 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_runs: {
+        Row: {
+          cfbd_calls: number
+          cfbd_calls_remaining: number | null
+          error: string | null
+          finished_at: string | null
+          id: number
+          kind: string
+          season_year: number
+          started_at: string
+          status: string
+          summary: Json | null
+        }
+        Insert: {
+          cfbd_calls?: number
+          cfbd_calls_remaining?: number | null
+          error?: string | null
+          finished_at?: string | null
+          id?: never
+          kind: string
+          season_year: number
+          started_at?: string
+          status?: string
+          summary?: Json | null
+        }
+        Update: {
+          cfbd_calls?: number
+          cfbd_calls_remaining?: number | null
+          error?: string | null
+          finished_at?: string | null
+          id?: never
+          kind?: string
+          season_year?: number
+          started_at?: string
+          status?: string
+          summary?: Json | null
+        }
+        Relationships: []
+      }
       team_seasons: {
         Row: {
           classification: Database["public"]["Enums"]["classification"]

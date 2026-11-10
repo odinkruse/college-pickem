@@ -43,6 +43,21 @@ Living document. Update it when a rule is clarified or a phase finishes.
 - Quota: the free tier is 1,000 calls/month; the response header `x-calllimit-remaining` shows what's left.
   The bulk endpoints (`year+week+classification`) make a full week cost about 6 calls.
 
+## CFBD sync (Phase 3)
+
+Code: `src/lib/sync/`. Run from `/admin` (password: `ADMIN_PASSWORD`, any username) or
+`npm run sync -- [all|teams|games|rosters|lines] [year]`. Each run is logged in `sync_runs`.
+
+| Sync | CFBD calls | Notes |
+|---|---|---|
+| teams | 1 (`/teams?year`) | All ~680 teams, all divisions. Conferences are derived from team conference names (CFBD's `/conferences` repeats names across eras). |
+| games | 2 (`/games` fbs + fcs, regular season) | Deduped; FBS-vs-FCS games are in both lists. Opponents missing from `/teams` are created bare. |
+| rosters | 1 (`/roster?year`, all teams, ~9 MB) | FBS/FCS teams only; positions QB/RB/FB/WR/TE/ATH/unlisted. Roster ids match box-score athlete ids (100% in the week 10 test). Never touches `position_override`. |
+| lines | 1 (`/lines?year`, whole season) | Upsert by (game, provider); manual lines use provider `manual` so sync never collides. |
+
+First 2026 sync: 682 teams, 1,608 games, 9,322 skill players, 2,041 lines, ~16 s total.
+Re-running is idempotent. Includes 46 FCS-vs-D-II games, which the division rule must reject.
+
 ## Data model
 
 Source of truth: `supabase/migrations/`. Summary:
@@ -93,7 +108,7 @@ players and writes picks with lock checks bypassed for historical imports.
 | 0 | CFBD data spike | ✅ done |
 | 1 | Scaffold: Next.js 16, Tailwind 4, shadcn/ui, Supabase client, Vercel deploy, status page | ✅ done — live at https://college-pickem-phi.vercel.app |
 | 2 | Schema: migrations, seed, generated types, RLS on | ✅ done |
-| 3 | Reference sync: teams, games, rosters, lines + admin "Sync now" | |
+| 3 | Reference sync: teams, games, rosters, lines + admin "Sync now" | ✅ done |
 | 4 | Rules engine + Vitest tests | |
 | 5 | Picks UI: week view, eligible-player search, lock countdown, Server Actions, lock trigger | |
 | 6 | Stats sync + scoring + DNP review queue + history / burned list | |
