@@ -60,10 +60,16 @@ type Check = { state: "ok" | "error"; detail: string };
 
 async function checkSupabase(): Promise<Check> {
   try {
-    // A cheap admin call that proves both the project URL and the secret key are valid.
-    const { error } = await createAdminClient().auth.admin.listUsers({ perPage: 1 });
+    // Reads the seeded league through the typed client: proves URL, secret key, schema and grants.
+    const { data: league, error } = await createAdminClient()
+      .from("leagues")
+      .select("name, entries(seasons(year))")
+      .eq("slug", "main")
+      .maybeSingle();
     if (error) return { state: "error", detail: error.message };
-    return { state: "ok", detail: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).host };
+    if (!league) return { state: "error", detail: "Connected, but the league isn't seeded (run supabase/seed.sql)" };
+    const years = league.entries.map((e) => e.seasons.year).sort().join(", ");
+    return { state: "ok", detail: `${league.name} · seasons ${years}` };
   } catch (error) {
     return { state: "error", detail: describeError(error) };
   }

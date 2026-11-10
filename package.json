@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:push": "supabase db push --remote",
+    "db:types": "supabase gen types --lang typescript --remote --schema public > src/lib/supabase/database.types.ts",
+    "db:test": "supabase db query --remote -f supabase/tests/pick_rules.sql",
+    "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

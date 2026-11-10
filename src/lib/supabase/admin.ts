@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { requireEnv } from "@/lib/env";
+import type { Database } from "./database.types";
 
 /**
  * Server-only Supabase client authenticated with the secret key.
@@ -12,7 +13,7 @@ import { requireEnv } from "@/lib/env";
  * reads move to a per-request client built with @supabase/ssr and the publishable key.
  */
 export function createAdminClient() {
-  return createClient(
+  return createClient<Database>(
     requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
     requireEnv("SUPABASE_SECRET_KEY"),
     { auth: { persistSession: false, autoRefreshToken: false } },

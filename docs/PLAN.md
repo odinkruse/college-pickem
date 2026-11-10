@@ -45,18 +45,33 @@ Living document. Update it when a rule is clarified or a phase finishes.
 
 ## Data model
 
-See the plan in the initial planning session. Summary:
+Source of truth: `supabase/migrations/`. Summary:
 
-- Reference (synced): `seasons`, `conferences`, `teams`, `team_seasons` (conference + classification per
-  year), `players`, `player_seasons` (team + position per year, `position_override`), `games`,
-  `game_lines`, `player_game_stats` (raw stats + `appeared` + `source cfbd|manual`).
-- Game state: `profiles` (`auth_user_id` nullable until login exists), `leagues`, `league_members`,
-  `entries` (league × profile), `league_weeks` (`rule standard|conference|underdog`),
-  `entry_week_conference` (each entry's chosen conference for conference week), `picks`.
-- Single use is enforced in the database with
-  `CREATE UNIQUE INDEX ... ON picks (entry_id, player_id) WHERE status <> 'dnp'`.
-- Lock is enforced by a trigger that rejects changes to picks whose (old or new) game has kicked off.
+- Reference (synced): `seasons` (`scoring_rules` jsonb), `conferences`, `teams`, `team_seasons`
+  (conference + classification per year), `players`, `player_seasons` (team + position per year,
+  `position_override`), `games`, `game_lines` (`spread_home`, negative = home favored),
+  `player_game_stats` (raw stats + `appeared` + `source cfbd|manual`).
+- Game state: `profiles` (`auth_user_id` nullable until login exists), `leagues` (`slug`),
+  `league_members`, `entries` (league × season × profile), `league_weeks` (special weeks only;
+  no row = standard), `picks` (`review_reason` non-null = in the admin review queue).
+- Conference week has no "declared conference" column: the conference is whatever the entry's first
+  pick that week implies, and the rules engine requires the other picks to match.
+- Single use: `unique (entry_id, player_id) where status <> 'dnp'` on picks.
+- Trigger `picks_enforce_rules`: pick week/season/team must match its game and the player's roster row;
+  no insert/delete/change of the picked player/game after lock. Status/points may change after lock.
+  Lock = kickoff, or noon ET on game day when the time is TBD (`game_lock_at`).
+  Historical imports set `pickem.bypass_lock = on` for their transaction.
 - Manual rows (`source = 'manual'`) are never overwritten by sync.
+- RLS is on everywhere with no policies. The publishable key can read and write nothing (verified).
+
+### Database workflow (no local Docker)
+
+- New migration: `supabase migration new <name>`, write SQL, then `npm run db:push`. Never edit a
+  migration that has already been pushed — add a new one.
+- After schema changes: `npm run db:types` regenerates `src/lib/supabase/database.types.ts`.
+- `npm run db:test` runs `supabase/tests/pick_rules.sql` against the hosted DB inside a rolled-back
+  transaction (11 checks).
+- Seed (`supabase/seed.sql`, idempotent): seasons 2026–2027, profile "Odin", league `main`, entries.
 
 ## Rule enforcement
 
@@ -76,8 +91,8 @@ players and writes picks with lock checks bypassed for historical imports.
 | # | Phase | Status |
 |---|---|---|
 | 0 | CFBD data spike | ✅ done |
-| 1 | Scaffold: Next.js 16, Tailwind 4, shadcn/ui, Supabase client, Vercel deploy, status page | ✅ code done, accounts being connected |
-| 2 | Schema: migrations, seed, generated types, RLS on | |
+| 1 | Scaffold: Next.js 16, Tailwind 4, shadcn/ui, Supabase client, Vercel deploy, status page | ✅ done — live at https://college-pickem-phi.vercel.app |
+| 2 | Schema: migrations, seed, generated types, RLS on | ✅ done |
 | 3 | Reference sync: teams, games, rosters, lines + admin "Sync now" | |
 | 4 | Rules engine + Vitest tests | |
 | 5 | Picks UI: week view, eligible-player search, lock countdown, Server Actions, lock trigger | |
