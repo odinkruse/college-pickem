@@ -65,6 +65,22 @@ Scoring lives in `src/lib/picks/scoring.ts`: `scoreWeek` (no CFBD calls; only wr
 Box-score parsing is the pure `src/lib/sync/box-score.ts` (unit-tested).
 Re-running is idempotent. Includes 46 FCS-vs-D-II games, which the division rule must reject.
 
+## Manual overrides (Phase 7)
+
+Admin pages (same password): `/admin/games` (a week's games and the line that counts; filter by team or
+"no line"), `/admin/games/[id]` (set/remove a manual line; edit or add any player's stat line, incl.
+"did not play"; picks on the game), `/admin/players` (position overrides, the no-position list, add a
+player CFBD doesn't have). Code: `src/lib/admin/forms.ts` (pure parsing, tested) and
+`src/lib/admin/overrides.ts`; actions in `src/app/admin/override-actions.ts`.
+
+- Manual lines: `game_lines` provider `manual`; `chooseSpread` prefers it. Entered as "favorite by N".
+- Manual stat lines: `source = 'manual'`, kept by the results sync; saving/removing rescores the week.
+  Removing one leaves no line until the next results sync restores CFBD's (a pick goes to review meanwhile).
+  The review buttons write the same kind of row, so a review answer can be changed here.
+- Position override changes affect new picks only; existing picks aren't re-validated.
+- Hand-added players have no `cfbd_id`, so syncs never touch them, but their stats are manual too. If
+  CFBD later lists the same person, the results sync creates a second player; pick the CFBD one.
+
 ## Data model
 
 Source of truth: `supabase/migrations/`. Summary:
@@ -97,7 +113,7 @@ Source of truth: `supabase/migrations/`. Summary:
 
 ## Rule enforcement
 
-1. `src/lib/rules/` — pure TypeScript, no I/O, unit-tested with Vitest (`npm test`, 59 tests). Used by
+1. `src/lib/rules/` — pure TypeScript, no I/O, unit-tested with Vitest (`npm test`). Used by
    both the UI (to grey out ineligible players) and Server Actions (before writing).
    - `validatePick(candidate, ctx)` returns *every* violation (codes like `already_used`, `favored`,
      `lower_division_opponent`), not just the first, so the UI can explain all of them.
@@ -130,7 +146,7 @@ players and writes picks with lock checks bypassed for historical imports.
 | 4 | Rules engine + Vitest tests | ✅ done |
 | 5 | Picks UI: week view, eligible-player search, lock countdown, Server Actions, lock trigger | ✅ done — `/picks` (password-protected like `/admin`) |
 | 6 | Stats sync + scoring + DNP review queue + history / burned list | ✅ done — results sync (4 calls/week), `/admin` review list, `/picks/season` |
-| 7 | Manual overrides admin | |
+| 7 | Manual overrides admin | ✅ done — `/admin/games`, `/admin/games/[id]`, `/admin/players` |
 | 8 | League pick import (Josh's sheet / email) + standings — backfill 2026 for testing | |
 | 9 | Scheduling: Supabase `pg_cron` → sync endpoint (Vercel Hobby cron is daily only) | |
 | 10 | Multi-user: Supabase Auth, RLS policies, picks hidden until locked | |

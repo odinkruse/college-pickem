@@ -7,6 +7,7 @@ import { seasonYearFor } from "@/lib/cfbd";
 import { seasonWeeks } from "@/lib/season";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ALL_SYNC_KINDS } from "@/lib/sync/run";
+import { AdminNav } from "./admin-nav";
 import { ReviewButtons } from "./review-item";
 import { SyncPanel } from "./sync-panel";
 
@@ -16,6 +17,7 @@ const SLOT_LABEL = { QB: "QB", RB: "RB", WRTE: "WR/TE" } as const;
 export default function AdminPage(props: PageProps<"/admin">) {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-10">
+      <AdminNav active="/admin" />
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
         <AdminContent searchParams={props.searchParams} />
       </Suspense>
@@ -70,7 +72,7 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
       .maybeSingle(),
     db
       .from("picks")
-      .select("id, week, slot, review_reason, players(name), teams(school), entries!inner(season_id, profiles(display_name))")
+      .select("id, week, slot, review_reason, player_id, game_id, players(name), teams(school), entries!inner(season_id, profiles(display_name))")
       .eq("entries.season_id", seasonId)
       .not("review_reason", "is", null)
       .order("week"),
@@ -151,7 +153,10 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
                       {r.players.name} <span className="text-muted-foreground">· {r.teams.school}</span>
                     </div>
                     <div className="text-muted-foreground">
-                      Week {r.week} {SLOT_LABEL[r.slot]} · {r.entries.profiles.display_name}
+                      Week {r.week} {SLOT_LABEL[r.slot]} · {r.entries.profiles.display_name} ·{" "}
+                      <Link href={`/admin/games/${r.game_id}?player=${r.player_id}`} className="underline underline-offset-4">
+                        Edit stats
+                      </Link>
                     </div>
                   </div>
                   <ReviewButtons pickId={r.id} />

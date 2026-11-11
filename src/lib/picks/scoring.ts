@@ -7,7 +7,7 @@ import { must, ok } from "@/lib/supabase/helpers";
 type Db = SupabaseClient<Database>;
 
 /** seasons.scoring_rules, falling back to the defaults for any missing knob. */
-function parseRules(json: Json | null): ScoringRules {
+export function parseRules(json: Json | null): ScoringRules {
   const r = json && typeof json === "object" && !Array.isArray(json) ? json : {};
   const num = (key: keyof ScoringRules) => (typeof r[key] === "number" ? (r[key] as number) : DEFAULT_SCORING[key]);
   return {
