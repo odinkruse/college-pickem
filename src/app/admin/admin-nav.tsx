@@ -4,12 +4,13 @@ const LINKS = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/games", label: "Games & lines" },
   { href: "/admin/players", label: "Players" },
+  { href: "/admin/picks", label: "Member picks" },
   { href: "/admin/import", label: "Import" },
 ] as const;
 
 export function AdminNav({ active }: { active: (typeof LINKS)[number]["href"] }) {
   return (
-    <nav aria-label="Admin" className="flex gap-4 border-b pb-2 text-sm">
+    <nav aria-label="Admin" className="flex flex-wrap gap-x-4 gap-y-1 border-b pb-2 text-sm">
       {LINKS.map((l) => (
         <Link
           key={l.href}

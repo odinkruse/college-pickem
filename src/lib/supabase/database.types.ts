@@ -251,16 +251,19 @@ export type Database = {
         Row: {
           league_id: number
           pick_sheet_id: string | null
+          scoring_sheet_id: string | null
           season_id: number
         }
         Insert: {
           league_id: number
           pick_sheet_id?: string | null
+          scoring_sheet_id?: string | null
           season_id: number
         }
         Update: {
           league_id?: number
           pick_sheet_id?: string | null
+          scoring_sheet_id?: string | null
           season_id?: number
         }
         Relationships: [

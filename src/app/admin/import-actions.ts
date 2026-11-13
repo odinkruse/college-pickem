@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { isAdminAuthorization } from "@/lib/admin-auth";
 import { matchCellText, runImport, saveImportOverride } from "@/lib/import/league-import";
+import { changePick, undoPickChange } from "@/lib/import/manual-pick";
 import type { Slot } from "@/lib/rules";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FormState } from "./override-actions";
@@ -77,6 +78,41 @@ export async function resolveCellAction(_prev: FormState, form: FormData): Promi
     const result = await runImport(db, year, [week]);
     refresh();
     return result.ok ? { ok: true, message: `Saved, and week ${week} re-imported.` } : { ok: false, message: result.error };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+function pickArgs(form: FormData) {
+  const entryId = Number(form.get("entry"));
+  const week = Number(form.get("week"));
+  const slot = String(form.get("slot")) as Slot;
+  if (!Number.isInteger(entryId) || !Number.isInteger(week) || week < 0 || week > 20 || !SLOTS.includes(slot)) throw new Error("Invalid request.");
+  return { entryId, week, slot };
+}
+
+/** Changes any member's pick to the typed "Name - School" (matched for that week). */
+export async function changePickAction(_prev: FormState, form: FormData): Promise<FormState> {
+  try {
+    const db = await guard();
+    const { entryId, week, slot } = pickArgs(form);
+    const typed = String(form.get("typed") ?? "").trim().slice(0, 100);
+    if (!typed) throw new Error('Type the player as "Name - School".');
+    const message = await changePick(db, entryId, week, slot, typed);
+    refresh();
+    return { ok: true, message };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function undoPickChangeAction(_prev: FormState, form: FormData): Promise<FormState> {
+  try {
+    const db = await guard();
+    const { entryId, week, slot } = pickArgs(form);
+    const message = await undoPickChange(db, entryId, week, slot);
+    refresh();
+    return { ok: true, message };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : String(e) };
   }

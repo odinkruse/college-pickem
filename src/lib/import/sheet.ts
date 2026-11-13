@@ -90,6 +90,34 @@ export function parseTabNames(html: string): string[] {
   return [...html.matchAll(/\{name: "((?:[^"\\]|\\.)*)", pageUrl/g)].map((m) => JSON.parse(`"${m[1]}"`) as string);
 }
 
+// --- Scoring sheet ("CFB Fantasy Scoring <year>"): a tab per week, a row per member, and per slot
+// Passing | Rushing | Receiving | TD | Turnover | Points.
+
+const SCORING_SLOTS: Slot[] = ["QB", "RB", "WRTE"];
+
+export type SheetLine = { pass: number; rush: number; rec: number; td: number; to: number; points: number };
+
+/** Pure: a week tab's CSV → member name → per-slot line. Columns are found from the header text. */
+export function parseScoringTab(rows: string[][]): Map<string, Partial<Record<Slot, SheetLine>>> {
+  const headerAt = rows.findIndex((r) => r.some((c) => c.trim() === "Passing"));
+  if (headerAt < 0) return new Map();
+  const pointCols = rows[headerAt].flatMap((c, i) => (/\bPoints$/.test(c.trim()) && !/Total/.test(c) ? [i] : []));
+  const num = (s: string | undefined) => Number((s ?? "").trim() || 0) || 0;
+
+  const out = new Map<string, Partial<Record<Slot, SheetLine>>>();
+  for (const r of rows.slice(headerAt + 1)) {
+    const name = r[0]?.trim();
+    if (!name) continue;
+    const lines: Partial<Record<Slot, SheetLine>> = {};
+    pointCols.slice(0, 3).forEach((p, i) => {
+      if (r.slice(p - 5, p + 1).every((c) => !c?.trim())) return; // nothing entered for this slot
+      lines[SCORING_SLOTS[i]] = { pass: num(r[p - 5]), rush: num(r[p - 4]), rec: num(r[p - 3]), td: num(r[p - 2]), to: num(r[p - 1]), points: num(r[p]) };
+    });
+    out.set(name, lines);
+  }
+  return out;
+}
+
 const sheetUrl = (sheetId: string, path: string) => `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}/${path}`;
 
 export async function fetchTabNames(sheetId: string): Promise<string[]> {

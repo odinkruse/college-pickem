@@ -1,10 +1,12 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { seasonYearFor } from "@/lib/cfbd";
+import { compareWithScoringSheet, type Discrepancy } from "@/lib/import/compare";
 import type { ImportIssue, ImportSummary } from "@/lib/import/league-import";
 import { seasonWeeks } from "@/lib/season";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -16,12 +18,12 @@ import { importAction, resolveCellAction } from "../import-actions";
 const selectClass = "h-8 rounded-lg border border-input bg-background px-2 text-sm";
 
 // Import the league's picks from its Google Sheet and fix the cells that didn't match.
-export default function ImportPage() {
+export default function ImportPage(props: PageProps<"/admin/import">) {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-10">
       <AdminNav active="/admin/import" />
       <Suspense fallback={<p className="text-muted-foreground">Loading…</p>}>
-        <ImportContent />
+        <ImportContent searchParams={props.searchParams} />
       </Suspense>
     </main>
   );
@@ -47,8 +49,9 @@ function currentIssues(runs: Run[], pick: (s: ImportSummary) => ImportIssue[]): 
   return out.sort((a, b) => a.week - b.week || a.member.localeCompare(b.member));
 }
 
-async function ImportContent() {
+async function ImportContent({ searchParams }: { searchParams: PageProps<"/admin/import">["searchParams"] }) {
   await connection();
+  const compare = (await searchParams).compare === "1";
   const now = new Date();
   const year = seasonYearFor(now);
   const db = createAdminClient();
@@ -198,6 +201,27 @@ async function ImportContent() {
         </Card>
       )}
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Compare with the scoring sheet</CardTitle>
+          <CardDescription>
+            Every pick where the app&apos;s points differ from the league&apos;s hand-kept scoring sheet, with both stat lines. Usually a
+            stat-source difference; if CFBD is wrong, fix the stat line on the game page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {compare ? (
+            <Suspense fallback={<p className="text-sm text-muted-foreground">Reading the scoring sheet…</p>}>
+              <Comparison year={year} />
+            </Suspense>
+          ) : (
+            <Link href="/admin/import?compare=1" className="text-sm underline underline-offset-4">
+              Run the comparison (reads the scoring sheet, a few seconds)
+            </Link>
+          )}
+        </CardContent>
+      </Card>
+
       {loose.length > 0 && (
         <Card>
           <CardContent>
@@ -230,6 +254,65 @@ function IssueList({ title, items }: { title: string; items: ImportIssue[] }) {
         {items.map((i) => (
           <li key={`${i.member}|${i.week}|${i.slot}|${i.problem}`}>
             {i.member} wk{i.week} {i.slot}: &ldquo;{i.text}&rdquo; <span className="text-muted-foreground">{i.problem}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+const SLOT_NAME = { QB: "QB", RB: "RB", WRTE: "WR/TE" } as const;
+
+function statText(s: Discrepancy["app"]) {
+  if (!s) return "no stat line";
+  const parts = [
+    s.pass && `${s.pass} pass`,
+    s.rush && `${s.rush} rush`,
+    s.rec && `${s.rec} rec`,
+    s.td && `${s.td} TD`,
+    s.to && `${s.to} TO`,
+  ].filter(Boolean);
+  return parts.length ? parts.join(", ") : "no stats";
+}
+
+async function Comparison({ year }: { year: number }) {
+  let result;
+  try {
+    result = await compareWithScoringSheet(createAdminClient(), year);
+  } catch (e) {
+    return <p className="text-sm text-destructive">{e instanceof Error ? e.message : String(e)}</p>;
+  }
+  const { compared, discrepancies, weeks } = result;
+  return (
+    <div className="flex flex-col gap-3 text-sm">
+      <p className="text-muted-foreground">
+        Weeks {weeks[0]}–{weeks.at(-1)} · {compared} scored picks compared · {compared - discrepancies.filter((d) => d.kind === "points").length}{" "}
+        identical · {discrepancies.length} to look at
+      </p>
+      <ul className="flex flex-col divide-y">
+        {discrepancies.map((d) => (
+          <li key={`${d.member}|${d.week}|${d.slot}`} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-2">
+            <div className="min-w-0">
+              <div>
+                <span className="font-medium">
+                  {d.member} · wk {d.week} {SLOT_NAME[d.slot]}
+                </span>{" "}
+                {d.player ?? <span className="text-muted-foreground">no pick in the app</span>}
+              </div>
+              <div className="text-muted-foreground">
+                App: {d.kind === "no_app_score" && d.player ? "not scored" : statText(d.app)} · Sheet: {d.sheet ? statText(d.sheet) : "blank"}
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-3 tabular-nums">
+              <span>
+                app <span className="font-semibold">{d.appPoints ?? "–"}</span> · sheet <span className="font-semibold">{d.sheetPoints ?? "–"}</span>
+              </span>
+              {d.gameId && (
+                <Link href={`/admin/games/${d.gameId}?player=${d.playerId}`} className="underline underline-offset-4">
+                  Stats
+                </Link>
+              )}
+            </div>
           </li>
         ))}
       </ul>

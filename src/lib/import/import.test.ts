@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { matchPick, matchTeam, normalizeName, type WeekIndex } from "./match";
-import { parseCsv, parseMemberTab, parseTabNames, splitPickCell } from "./sheet";
+import { parseCsv, parseMemberTab, parseScoringTab, parseTabNames, splitPickCell } from "./sheet";
 
 describe("sheet parsing", () => {
   it("parses quoted CSV with commas and doubled quotes", () => {
@@ -99,5 +99,22 @@ describe("matching", () => {
     const m = matchPick("Nobody Here - USC", "QB", index);
     expect(m.ok).toBe(false);
     expect(!m.ok && m.suggestions[0]).toEqual({ playerId: 12, label: "Jayden Maiava (USC)" });
+  });
+});
+
+describe("scoring sheet", () => {
+  it("reads per-slot lines by header, with gviz's merged header row", () => {
+    const rows = [
+      ["", "QB Total Points", "Passing", "Rushing", "Receiving", "TD", "Turnover", "Points", "Passing", "Rushing", "Receiving", "TD", "Turnover", "Points", "Passing", "Rushing", "Receiving", "TD", "Turnover", "Points"],
+      ["Odin", "31", "186", "-5", "", "1", "1", "11", "", "86", "5", "1", "", "14", "", "", "65", "", "", "6"],
+      ["Empty", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+    ];
+    const parsed = parseScoringTab(rows);
+    expect(parsed.get("Odin")).toEqual({
+      QB: { pass: 186, rush: -5, rec: 0, td: 1, to: 1, points: 11 },
+      RB: { pass: 0, rush: 86, rec: 5, td: 1, to: 0, points: 14 },
+      WRTE: { pass: 0, rush: 0, rec: 65, td: 0, to: 0, points: 6 },
+    });
+    expect(parsed.get("Empty")).toEqual({});
   });
 });
