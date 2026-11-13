@@ -102,6 +102,33 @@ Change a schedule: `select cron.alter_job((select jobid from cron.job where jobn
 Admin also has `/admin/picks` (change any member's pick; stored as a per-cell import override when the
 sheet has text in that cell) and a scoring-sheet comparison on `/admin/import` (`league_seasons.scoring_sheet_id`).
 
+## Members and sign-in (Phase 10)
+
+- Supabase Auth, two ways in: **Google** and an **emailed 6-digit code** (sent through a Gmail account
+  via Supabase custom SMTP). Code: `src/app/login/`, `src/app/auth/callback/route.ts` (Google return),
+  `src/lib/supabase/server.ts` (cookie-aware auth client), `src/lib/auth.ts` (`getViewer`,
+  `requireMember`, `requireAdmin`). `src/proxy.ts` refreshes the session on every request and sends
+  signed-out visitors on `/picks` or `/admin` to `/login`.
+- A login is tied to a league profile by a one-time **invite link** `/join/<code>`
+  (`profiles.invite_code`), created on `/admin/members`. Signed-in users without a profile can only view.
+- Roles: `league_members.role` = owner | admin | member. Admin pages and actions require owner/admin
+  (`src/app/admin/layout.tsx` + every action). The week type is admin-only.
+- Data access stays server-side on the secret key, always scoped in code to the viewer's profile; the
+  browser never queries Supabase. RLS stays deny-all as a backstop.
+- Public: `/` (leaderboard), `/standings`, `/standings/[entry]` (picks hidden until kickoff).
+- Picks vs. the sheet: `picks.entered_via` = app | sheet | admin. The import never overwrites an app pick
+  (reported as "picked in the app" on `/admin/import`); admin changes (`/admin/picks`) win over both.
+  `/admin/picks` also has the week's picks as copyable text, app picks marked "(app)".
+
+### One-time Supabase dashboard setup
+1. Authentication → URL Configuration: Site URL `https://college-pickem-phi.vercel.app`; Redirect URLs
+   `https://college-pickem-phi.vercel.app/auth/callback` and `http://localhost:3000/auth/callback`.
+2. Authentication → Emails → Templates: "Magic link" and "Confirm signup" bodies must contain `{{ .Token }}`.
+3. Authentication → Emails → SMTP Settings: `smtp.gmail.com`, port 465, the Gmail address as username and
+   sender, a Gmail **app password** (needs 2-Step Verification on that account).
+4. Authentication → Sign In / Providers → Google: client ID + secret from a Google Cloud OAuth client
+   (Web application) whose authorized redirect URI is `https://wzjuoluqlrwjyuyqlnyp.supabase.co/auth/v1/callback`.
+
 ## Data model
 
 Source of truth: `supabase/migrations/`. Summary:
@@ -122,6 +149,7 @@ Source of truth: `supabase/migrations/`. Summary:
   Historical imports set `pickem.bypass_lock = on` for their transaction.
 - Manual rows (`source = 'manual'`) are never overwritten by sync.
 - RLS is on everywhere with no policies. The publishable key can read and write nothing (verified).
+  The publishable key is used only for Supabase Auth (sign-in, session cookies).
 
 ### Database workflow (no local Docker)
 
@@ -197,4 +225,4 @@ stat-source differences (CFBD's box score vs. what was hand-entered), not scorin
 | 7 | Manual overrides admin | ✅ done — `/admin/games`, `/admin/games/[id]`, `/admin/players` |
 | 8 | League pick import (Josh's sheet) + standings — backfill 2026 for testing | ✅ done — `/admin/import`, `/standings`; weeks 1–10 imported |
 | 9 | Scheduling: Supabase `pg_cron` → sync endpoint (Vercel Hobby cron is daily only) | ✅ done — `/api/cron`, daily + Saturday-evening runs |
-| 10 | Multi-user: Supabase Auth, RLS policies, picks hidden until locked | |
+| 10 | Multi-user: Supabase Auth (Google + email code), invite links, roles, app-vs-sheet picks | ✅ built — needs the dashboard setup above |

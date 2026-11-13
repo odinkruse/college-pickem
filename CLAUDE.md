@@ -9,7 +9,8 @@ Read [docs/PLAN.md](docs/PLAN.md) first: game rules, data-model decisions, CFBD 
 - Owner is an experienced full-stack dev who is new to Next.js, Supabase and Vercel: explain
   framework-specific concepts briefly when introducing them.
 - Server-only code imports `server-only`. The Supabase secret key is used only via
-  `src/lib/supabase/admin.ts`.
+  `src/lib/supabase/admin.ts`. Who is signed in comes from `getViewer()` in `src/lib/auth.ts`; every
+  Server Action re-checks it (`requireMember` / `requireAdmin`) and scopes data to that profile.
 - CFBD calls cost quota (1,000/month free tier). Prefer bulk year+week+classification endpoints and
   persist results; never call CFBD per page view without `use cache`.
 - Schema changes go in `supabase/migrations/` via `supabase migration new <name> < /dev/null`, applied with `supabase db push`.

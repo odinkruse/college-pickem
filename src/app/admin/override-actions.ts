@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
-import { isAdminAuthorization } from "@/lib/admin-auth";
+import { requireAdmin } from "@/lib/auth";
 import { parseManualSpread, parseManualStats, parseNewPlayer, parseOverride } from "@/lib/admin/forms";
 import {
   addManualPlayer,
@@ -20,7 +19,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export type FormState = { ok: boolean; message: string } | null;
 
 async function guard() {
-  if (!isAdminAuthorization((await headers()).get("authorization"))) throw new Error("Not authorized.");
+  await requireAdmin();
   return createAdminClient();
 }
 

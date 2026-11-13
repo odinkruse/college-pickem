@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
-import { isAdminAuthorization } from "@/lib/admin-auth";
+import { getViewer } from "@/lib/auth";
 import { resolveReview } from "@/lib/picks/scoring";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runScheduled } from "@/lib/scheduled";
@@ -10,10 +9,9 @@ import { runSync, SYNC_KINDS, type SyncKind, type SyncResult } from "@/lib/sync/
 
 export type SyncActionState = { ok: boolean; lines: string[] } | null;
 
-// Re-check the password in every action: proxy.ts guards the /admin URL, but an action can be
-// POSTed to directly.
+// Re-check in every action: the admin layout guards the pages, but an action can be POSTed to directly.
 async function isAdmin() {
-  return isAdminAuthorization((await headers()).get("authorization"));
+  return (await getViewer())?.isAdmin ?? false;
 }
 
 /**

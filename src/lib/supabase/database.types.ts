@@ -385,6 +385,7 @@ export type Database = {
       picks: {
         Row: {
           created_at: string
+          entered_via: string
           entry_id: number
           game_id: number
           id: number
@@ -400,6 +401,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          entered_via?: string
           entry_id: number
           game_id: number
           id?: never
@@ -415,6 +417,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          entered_via?: string
           entry_id?: number
           game_id?: number
           id?: never
@@ -617,18 +620,21 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          invite_code: string | null
         }
         Insert: {
           auth_user_id?: string | null
           created_at?: string
           display_name: string
           id?: string
+          invite_code?: string | null
         }
         Update: {
           auth_user_id?: string | null
           created_at?: string
           display_name?: string
           id?: string
+          invite_code?: string | null
         }
         Relationships: []
       }
@@ -780,13 +786,16 @@ export type Database = {
         Args: { kickoff: string; time_tbd: boolean }
         Returns: string
       }
-      import_picks: { Args: { p_picks: Json }; Returns: Json }
+      import_picks: {
+        Args: { p_force?: boolean; p_picks: Json }
+        Returns: Json
+      }
       is_game_locked: { Args: { p_game_id: number }; Returns: boolean }
     }
     Enums: {
       classification: "fbs" | "fcs" | "ii" | "iii"
       data_source: "cfbd" | "manual"
-      member_role: "owner" | "member"
+      member_role: "owner" | "member" | "admin"
       pick_slot: "QB" | "RB" | "WRTE"
       pick_status: "pending" | "locked" | "final" | "dnp"
       season_type: "regular" | "postseason"
@@ -920,7 +929,7 @@ export const Constants = {
     Enums: {
       classification: ["fbs", "fcs", "ii", "iii"],
       data_source: ["cfbd", "manual"],
-      member_role: ["owner", "member"],
+      member_role: ["owner", "member", "admin"],
       pick_slot: ["QB", "RB", "WRTE"],
       pick_status: ["pending", "locked", "final", "dnp"],
       season_type: ["regular", "postseason"],

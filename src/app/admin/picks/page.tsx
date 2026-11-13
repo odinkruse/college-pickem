@@ -12,6 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { must } from "@/lib/supabase/helpers";
 import { ActionForm } from "../action-form";
 import { AdminNav } from "../admin-nav";
+import { CopyButton } from "../copy-button";
 import { changePickAction, undoPickChangeAction } from "../import-actions";
 
 const SLOTS: Slot[] = ["QB", "RB", "WRTE"];
@@ -46,10 +47,29 @@ async function MemberPicks({ searchParams }: { searchParams: PageProps<"/admin/p
   const week = weeks.includes(Number(params.week)) ? Number(params.week) : current;
   if (!entry) return <p className="text-muted-foreground">No entries for {year} yet. Run an import first.</p>;
 
-  const [picksResult, overridesResult] = await Promise.all([
+  const [picksResult, overridesResult, weekPicksResult] = await Promise.all([
     db.from("picks").select("slot, status, points, review_reason, players(name), teams(school)").eq("entry_id", entry.id).eq("week", week),
     db.from("pick_import_overrides").select("slot, cell_text, players(name)").eq("entry_id", entry.id).eq("week", week),
+    db
+      .from("picks")
+      .select("slot, entered_via, players(name), teams(school), entries!inner(seasons!inner(year), profiles(display_name))")
+      .eq("entries.seasons.year", year)
+      .eq("week", week),
   ]);
+  const weekPicks = must(weekPicksResult, "load week picks");
+  const byMember = new Map<string, typeof weekPicks>();
+  for (const p of weekPicks) byMember.set(p.entries.profiles.display_name, [...(byMember.get(p.entries.profiles.display_name) ?? []), p]);
+  const exportText = [...byMember]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, list]) => {
+      const cell = (slot: Slot) => {
+        const p = list.find((x) => x.slot === slot);
+        return p ? `${p.players.name} - ${p.teams.school}${p.entered_via === "app" ? " (app)" : ""}` : "—";
+      };
+      return `${name}: ${SLOTS.map(cell).join(" | ")}`;
+    })
+    .join("\n");
+  const appCount = weekPicks.filter((p) => p.entered_via === "app").length;
   const picks = must(picksResult, "load picks");
   const overrides = must(overridesResult, "load overrides");
 
@@ -146,6 +166,28 @@ async function MemberPicks({ searchParams }: { searchParams: PageProps<"/admin/p
               </div>
             );
           })}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Week {week} picks as text</CardTitle>
+          <CardDescription>
+            Everyone&apos;s picks as QB | RB | WR/TE, e.g. for the weekly email or Josh&apos;s sheet. {appCount} made in the app this week are
+            marked &ldquo;(app)&rdquo;; those aren&apos;t in the sheet unless someone copies them in.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          {exportText ? (
+            <>
+              <pre className="max-h-80 overflow-auto rounded bg-muted p-3 text-xs whitespace-pre-wrap">{exportText}</pre>
+              <div>
+                <CopyButton text={exportText} />
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">No picks for week {week} yet.</p>
+          )}
         </CardContent>
       </Card>
     </>

@@ -4,16 +4,17 @@ import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LockTime } from "@/components/time";
+import { getViewer } from "@/lib/auth";
 import { seasonYearFor } from "@/lib/cfbd";
 import { loadWeekContext, pickWarnings, teamSpread, type SeasonPick, type WeekContext } from "@/lib/picks/service";
 import type { Slot } from "@/lib/rules";
 import { seasonWeeks } from "@/lib/season";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { RemovePickButton, WeekRuleSelect } from "./controls";
-import { formatSpread, RULE_HINT, SLOT_LABEL } from "./format";
+import { formatSpread, RULE_HINT, RULE_LABEL, SLOT_LABEL } from "./format";
 import { PickDialog } from "./pick-dialog";
 
-// /picks is behind the password prompt in src/proxy.ts (Phase 1: one player, no login).
+// The signed-in member's picks for one week (picks/layout.tsx guarantees a linked member).
 export default function PicksPage(props: PageProps<"/picks">) {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-8">
@@ -35,7 +36,8 @@ async function PicksWeek({ searchParams }: { searchParams: PageProps<"/picks">["
   const requested = Number(params.week);
   const week = weeks.includes(requested) ? requested : current;
 
-  const ctx = await loadWeekContext(createAdminClient(), year, week);
+  const viewer = (await getViewer())!;
+  const ctx = await loadWeekContext(createAdminClient(), year, week, viewer.profileId!);
   const weekPicks = new Map(ctx.entryPicks.filter((p) => p.week === week).map((p) => [p.slot, p]));
   const weekPoints = [...weekPicks.values()].reduce((sum, p) => sum + (p.points ?? 0), 0);
 
@@ -49,7 +51,11 @@ async function PicksWeek({ searchParams }: { searchParams: PageProps<"/picks">["
               {year} season · {ctx.games.length} games · {RULE_HINT[ctx.weekRule]}
             </p>
           </div>
-          <WeekRuleSelect year={year} week={week} rule={ctx.weekRule} />
+          {viewer.isAdmin ? (
+            <WeekRuleSelect year={year} week={week} rule={ctx.weekRule} />
+          ) : (
+            ctx.weekRule !== "standard" && <span className="rounded-md border px-2 py-1 text-sm">{RULE_LABEL[ctx.weekRule]}</span>
+          )}
         </div>
         <nav aria-label="Weeks" className="flex flex-wrap gap-1">
           {weeks.map((w) => (

@@ -73,6 +73,7 @@ async function ImportContent({ searchParams }: { searchParams: PageProps<"/admin
   const unresolved = currentIssues(runs, (s) => s.unresolved);
   const errors = currentIssues(runs, (s) => s.errors);
   const warnings = currentIssues(runs, (s) => s.ruleWarnings);
+  const keptApp = currentIssues(runs, (s) => s.keptApp ?? []);
   const loose = currentIssues(runs, (s) => s.loose);
   const skipped = runs.find((r) => r.status === "ok" && r.week === null)?.summary?.skippedRows ?? [];
 
@@ -178,7 +179,7 @@ async function ImportContent({ searchParams }: { searchParams: PageProps<"/admin
         </CardContent>
       </Card>
 
-      {(errors.length > 0 || warnings.length > 0 || skipped.length > 0) && (
+      {(errors.length > 0 || warnings.length > 0 || skipped.length > 0 || keptApp.length > 0) && (
         <Card>
           <CardHeader>
             <CardTitle>Worth a look</CardTitle>
@@ -187,6 +188,7 @@ async function ImportContent({ searchParams }: { searchParams: PageProps<"/admin
           <CardContent className="flex flex-col gap-4 text-sm">
             <IssueList title="Refused by the database" items={errors} />
             <IssueList title="Breaks a rule as the app reads it" items={warnings} />
+            <IssueList title="Picked in the app, so the sheet's different pick was ignored" items={keptApp} />
             {skipped.length > 0 && (
               <div>
                 <div className="mb-1 font-medium">Rows without a week number (ignored)</div>

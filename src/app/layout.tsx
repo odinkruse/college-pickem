@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import { Suspense } from "react";
+import { SiteNav, SiteNavFallback } from "@/components/site-nav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,18 +32,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/" className="font-semibold">
               College Pick&apos;em
             </Link>
-            <Link href="/picks" className="text-muted-foreground hover:text-foreground">
-              Picks
-            </Link>
-            <Link href="/picks/season" className="text-muted-foreground hover:text-foreground">
-              Season
-            </Link>
-            <Link href="/standings" className="text-muted-foreground hover:text-foreground">
-              Standings
-            </Link>
-            <Link href="/admin" className="text-muted-foreground hover:text-foreground">
-              Admin
-            </Link>
+            <Suspense fallback={<SiteNavFallback />}>
+              <SiteNav />
+            </Suspense>
           </nav>
         </header>
         {children}

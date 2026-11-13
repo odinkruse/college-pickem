@@ -64,6 +64,8 @@ export type ImportSummary = {
   unresolved: ImportIssue[];
   /** The database refused the pick (e.g. the same player used twice). */
   errors: ImportIssue[];
+  /** The member picked in the app; the sheet's different pick was ignored. */
+  keptApp: ImportIssue[];
   /** Imported anyway, but the pick breaks a rule as the app understands it. */
   ruleWarnings: ImportIssue[];
   weeksScored: number[];
@@ -133,6 +135,7 @@ export async function importLeaguePicks(db: Db, year: number, opts: { weeks?: nu
     unresolved: [],
     errors: [],
     ruleWarnings: [],
+    keptApp: [],
     weeksScored: [],
   };
 
@@ -249,11 +252,12 @@ export async function importLeaguePicks(db: Db, year: number, opts: { weeks?: nu
     for (const part of chunks(batch, 200)) {
       const result = must(await db.rpc("import_picks", { p_picks: part }), "import picks") as {
         key: string;
-        result: "inserted" | "updated" | "unchanged" | "error";
+        result: "inserted" | "updated" | "unchanged" | "kept_app" | "error";
         message?: string;
       }[];
       for (const r of result) {
         if (r.result === "error") failed.push({ row: part.find((p) => p.key === r.key)!, message: r.message ?? "error" });
+        else if (r.result === "kept_app") summary.keptApp.push({ ...issueFor.get(r.key)!, problem: "Picked in the app; the sheet's pick was ignored." });
         else summary[r.result]++;
       }
     }

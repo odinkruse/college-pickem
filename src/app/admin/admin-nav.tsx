@@ -6,6 +6,7 @@ const LINKS = [
   { href: "/admin/players", label: "Players" },
   { href: "/admin/picks", label: "Member picks" },
   { href: "/admin/import", label: "Import" },
+  { href: "/admin/members", label: "Members" },
 ] as const;
 
 export function AdminNav({ active }: { active: (typeof LINKS)[number]["href"] }) {

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getViewer } from "@/lib/auth";
 import { seasonYearFor } from "@/lib/cfbd";
 import { loadWeekContext, type SeasonPick } from "@/lib/picks/service";
 import type { Slot, WeekRule } from "@/lib/rules";
@@ -10,7 +11,7 @@ import { seasonWeeks } from "@/lib/season";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { RULE_LABEL, SLOT_LABEL } from "../format";
 
-// Season summary for the owner's entry: points by week and who has been used.
+// Season summary for the signed-in member's entry: points by week and who has been used.
 export default function SeasonPage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-8">
@@ -29,7 +30,8 @@ async function SeasonSummary() {
   const year = seasonYearFor(now);
   const db = createAdminClient();
   const { weeks, current } = await seasonWeeks(year, now);
-  const ctx = await loadWeekContext(db, year, current);
+  const viewer = (await getViewer())!;
+  const ctx = await loadWeekContext(db, year, current, viewer.profileId!);
   const rules = (await db.from("league_weeks").select("week, rule").eq("league_id", ctx.leagueId).eq("season_id", ctx.seasonId)).data ?? [];
   const ruleByWeek = new Map(rules.map((r) => [r.week, r.rule as WeekRule]));
 

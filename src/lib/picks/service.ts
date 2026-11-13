@@ -21,10 +21,7 @@ import { must, ok } from "@/lib/supabase/helpers";
 
 type Db = SupabaseClient<Database>;
 
-/**
- * Phase 1 has one player and no login: every request acts as the owner's entry in the main league.
- * When auth arrives, this becomes "the signed-in user's profile".
- */
+/** The seeded owner profile (Odin). Used only as a default selection on admin pages. */
 export const OWNER_PROFILE_ID = "00000000-0000-4000-8000-000000000001";
 const LEAGUE_SLUG = "main";
 
@@ -90,12 +87,13 @@ function gameSide(t: TeamRow, seasonId: number): GameSide {
   return { teamId: t.id, classification: ts?.classification ?? null, conferenceId: ts?.conference_id ?? null };
 }
 
-export async function loadWeekContext(db: Db, year: number, week: number): Promise<WeekContext> {
+/** The week as seen by one member's entry (the signed-in member). */
+export async function loadWeekContext(db: Db, year: number, week: number, profileId: string): Promise<WeekContext> {
   const entry = must(
     await db
       .from("entries")
       .select("id, league_id, season_id, leagues!inner(slug), seasons!inner(year)")
-      .eq("profile_id", OWNER_PROFILE_ID)
+      .eq("profile_id", profileId)
       .eq("leagues.slug", LEAGUE_SLUG)
       .eq("seasons.year", year)
       .maybeSingle(),
@@ -357,6 +355,7 @@ export async function savePick(db: Db, ctx: WeekContext, slot: Slot, playerId: n
       points: null,
       review_reason: null,
       spread_at_pick: teamSpread(game, ps.team_id),
+      entered_via: "app",
     },
     { onConflict: "entry_id,week,slot" },
   );

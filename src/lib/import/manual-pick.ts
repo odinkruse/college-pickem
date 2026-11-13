@@ -69,7 +69,10 @@ export async function changePick(db: Db, entryId: number, week: number, slot: Sl
 
   const result = must(
     await db.rpc("import_picks", {
-      p_picks: [{ key: "manual", entry_id: entryId, week, slot, player_id: match.playerId, game_id: game.id, team_id: match.teamId, spread_at_pick: teamSpread }],
+      p_picks: [
+        { key: "manual", entry_id: entryId, week, slot, player_id: match.playerId, game_id: game.id, team_id: match.teamId, spread_at_pick: teamSpread, entered_via: "admin" },
+      ],
+      p_force: true, // an admin correction wins over a member's own app pick
     }),
     "save pick",
   ) as { result: string; message?: string }[];

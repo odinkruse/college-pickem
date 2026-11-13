@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
-import { isAdminAuthorization } from "@/lib/admin-auth";
+import { requireAdmin } from "@/lib/auth";
 import { matchCellText, runImport, saveImportOverride } from "@/lib/import/league-import";
 import { changePick, undoPickChange } from "@/lib/import/manual-pick";
 import type { Slot } from "@/lib/rules";
@@ -15,7 +14,7 @@ import type { FormState } from "./override-actions";
 const SLOTS: readonly Slot[] = ["QB", "RB", "WRTE"];
 
 async function guard() {
-  if (!isAdminAuthorization((await headers()).get("authorization"))) throw new Error("Not authorized.");
+  await requireAdmin();
   return createAdminClient();
 }
 

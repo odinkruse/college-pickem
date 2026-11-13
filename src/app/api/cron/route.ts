@@ -1,5 +1,5 @@
 import { after } from "next/server";
-import { isCronAuthorization } from "@/lib/admin-auth";
+import { isCronAuthorization } from "@/lib/cron-auth";
 import { runScheduled, SCHEDULED_JOBS, type ScheduledJob } from "@/lib/scheduled";
 
 // Called by Supabase pg_cron (via pg_net) on a schedule: POST /api/cron?job=daily|gameday with
