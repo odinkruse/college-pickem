@@ -36,6 +36,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/picks/season" className="text-muted-foreground hover:text-foreground">
               Season
             </Link>
+            <Link href="/standings" className="text-muted-foreground hover:text-foreground">
+              Standings
+            </Link>
             <Link href="/admin" className="text-muted-foreground hover:text-foreground">
               Admin
             </Link>

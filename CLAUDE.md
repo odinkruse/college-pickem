@@ -12,4 +12,4 @@ Read [docs/PLAN.md](docs/PLAN.md) first: game rules, data-model decisions, CFBD 
   `src/lib/supabase/admin.ts`.
 - CFBD calls cost quota (1,000/month free tier). Prefer bulk year+week+classification endpoints and
   persist results; never call CFBD per page view without `use cache`.
-- Schema changes go in `supabase/migrations/` via `supabase migration new`, applied with `supabase db push`.
+- Schema changes go in `supabase/migrations/` via `supabase migration new <name> < /dev/null`, applied with `supabase db push`.

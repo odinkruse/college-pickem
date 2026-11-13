@@ -104,7 +104,7 @@ Source of truth: `supabase/migrations/`. Summary:
 
 ### Database workflow (no local Docker)
 
-- New migration: `supabase migration new <name>`, write SQL, then `npm run db:push`. Never edit a
+- New migration: `supabase migration new <name> < /dev/null` (without a terminal it waits for SQL on stdin), write SQL, then `npm run db:push`. Never edit a
   migration that has already been pushed — add a new one.
 - After schema changes: `npm run db:types` regenerates `src/lib/supabase/database.types.ts`.
 - `npm run db:test` runs `supabase/tests/pick_rules.sql` against the hosted DB inside a rolled-back
@@ -129,11 +129,38 @@ Source of truth: `supabase/migrations/`. Summary:
 2. Postgres constraints and triggers — lock at kickoff, single use, one pick per slot.
 3. Row Level Security on every table. In Phase 1 only server code (secret key) touches the database.
 
-## Ingesting the rest of the league
+## League pick import (Phase 8)
 
-Other people's weekly picks arrive in Josh's Google Sheet or the weekly email. Each friend becomes a
-`profile` + `entry` with no login. An import step (sheet first, since it's structured) maps names to
-players and writes picks with lock checks bypassed for historical imports.
+Source: the league's Google Sheet ("CFB Fantasy <year> Rosters"), one tab per member, rows
+`Week | QB | RB | WR`, cells "Player Name - School". The sheet is shared by link, so the app reads it
+as CSV (`gviz/tq?tqx=out:csv&sheet=<tab>`) with no Google credentials. Tab names come from the public
+`htmlview` page (unofficial; falls back to the tabs already known). Sheet id per season:
+`league_seasons.pick_sheet_id`. Each tab = a `profile` + `league_members.sheet_tab` + `entry`; new tabs
+become new members automatically.
+
+Run from `/admin/import` (one week or all) or `npm run import -- 2026 [week…] [--dry]`. Logged in
+`sync_runs` (kind `import`, summary = full report). Code: `src/lib/import/` (`sheet.ts`, `match.ts` pure
+and tested; `league-import.ts`).
+
+- Matching, within teams playing that week: school (aliases like Pitt, FAU, typos like "Miama") →
+  exact name → close spelling → first-name variant (Cam/Cameron) → same last name at the slot's
+  position; then the exact name on any team playing that week. Ties go to the player with a box-score
+  line that week. Non-exact matches are listed as "fuzzy" on the import page.
+- Unmatched cells are fixed on `/admin/import` (pick a suggestion or type "Name - School"), stored in
+  `pick_import_overrides` keyed to the exact cell text, so editing the cell in the sheet starts over.
+- Writes go through `import_picks(jsonb)` (service role only): lock check bypassed, row-by-row so one
+  refusal (e.g. a player used twice) doesn't block the rest. The sheet wins: a changed cell replaces
+  the pick (including the owner's). Cells cleared in the sheet do *not* delete picks.
+- After writing, the imported weeks are rescored; refusals are retried once (a DNP release can make
+  a later re-pick legal only after scoring).
+- Rule check is informational (the league already accepted the picks): e.g. favored teams in Underdog week.
+- **Week 0:** CFBD files late-August games under week 1. The games sync stores week 1 games more than
+  6 days before the week's last kickoff as week 0 (`src/lib/sync/weeks.ts`); the league starts at week 1.
+
+Checked against the league's scoring sheet (weeks 1–10, 708 picks): 693 identical. The other 15 are
+stat-source differences (CFBD's box score vs. what was hand-entered), not scoring-rule differences.
+
+`/standings` (public: names and points only) and `/standings/[entry]` (picks shown only after kickoff).
 
 ## Phases
 
@@ -147,6 +174,6 @@ players and writes picks with lock checks bypassed for historical imports.
 | 5 | Picks UI: week view, eligible-player search, lock countdown, Server Actions, lock trigger | ✅ done — `/picks` (password-protected like `/admin`) |
 | 6 | Stats sync + scoring + DNP review queue + history / burned list | ✅ done — results sync (4 calls/week), `/admin` review list, `/picks/season` |
 | 7 | Manual overrides admin | ✅ done — `/admin/games`, `/admin/games/[id]`, `/admin/players` |
-| 8 | League pick import (Josh's sheet / email) + standings — backfill 2026 for testing | |
+| 8 | League pick import (Josh's sheet) + standings — backfill 2026 for testing | ✅ done — `/admin/import`, `/standings`; weeks 1–10 imported |
 | 9 | Scheduling: Supabase `pg_cron` → sync endpoint (Vercel Hobby cron is daily only) | |
 | 10 | Multi-user: Supabase Auth, RLS policies, picks hidden until locked | |

@@ -214,18 +214,21 @@ export type Database = {
           league_id: number
           profile_id: string
           role: Database["public"]["Enums"]["member_role"]
+          sheet_tab: string | null
         }
         Insert: {
           created_at?: string
           league_id: number
           profile_id: string
           role?: Database["public"]["Enums"]["member_role"]
+          sheet_tab?: string | null
         }
         Update: {
           created_at?: string
           league_id?: number
           profile_id?: string
           role?: Database["public"]["Enums"]["member_role"]
+          sheet_tab?: string | null
         }
         Relationships: [
           {
@@ -240,6 +243,39 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      league_seasons: {
+        Row: {
+          league_id: number
+          pick_sheet_id: string | null
+          season_id: number
+        }
+        Insert: {
+          league_id: number
+          pick_sheet_id?: string | null
+          season_id: number
+        }
+        Update: {
+          league_id?: number
+          pick_sheet_id?: string | null
+          season_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_seasons_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_seasons_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
             referencedColumns: ["id"]
           },
         ]
@@ -300,6 +336,48 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      pick_import_overrides: {
+        Row: {
+          cell_text: string
+          created_at: string
+          entry_id: number
+          player_id: number
+          slot: Database["public"]["Enums"]["pick_slot"]
+          week: number
+        }
+        Insert: {
+          cell_text: string
+          created_at?: string
+          entry_id: number
+          player_id: number
+          slot: Database["public"]["Enums"]["pick_slot"]
+          week: number
+        }
+        Update: {
+          cell_text?: string
+          created_at?: string
+          entry_id?: number
+          player_id?: number
+          slot?: Database["public"]["Enums"]["pick_slot"]
+          week?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pick_import_overrides_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pick_import_overrides_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       picks: {
         Row: {
@@ -699,6 +777,7 @@ export type Database = {
         Args: { kickoff: string; time_tbd: boolean }
         Returns: string
       }
+      import_picks: { Args: { p_picks: Json }; Returns: Json }
       is_game_locked: { Args: { p_game_id: number }; Returns: boolean }
     }
     Enums: {

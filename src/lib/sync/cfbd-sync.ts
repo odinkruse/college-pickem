@@ -13,6 +13,7 @@ import { scoreWeek } from "@/lib/picks/scoring";
 import { parseBoxScores, type ParsedLine } from "./box-score";
 import type { Database, TablesInsert } from "@/lib/supabase/database.types";
 import { chunks, dedupeBy, must, ok, selectAll } from "@/lib/supabase/helpers";
+import { leagueWeeks } from "./weeks";
 
 type Db = SupabaseClient<Database>;
 /** `week` limits games to one week and is required for the results sync. */
@@ -82,13 +83,14 @@ export async function syncGames({ db, year, seasonId, usage, week }: SyncContext
 
   // An opponent CFBD's /teams didn't list (rare): create a bare team so the game can be stored.
   const created = await createMissingTeams(db, games, teamIds, seasonId);
+  const weekOf = leagueWeeks(games); // week 0 games that CFBD files under week 1
 
   for (const batch of chunks(games)) {
     const rows: TablesInsert<"games">[] = batch.map((g) => ({
       cfbd_id: g.id,
       season_id: seasonId,
       season_type: g.seasonType,
-      week: g.week,
+      week: weekOf.get(g.id)!,
       home_team_id: teamIds.get(g.homeId)!,
       away_team_id: teamIds.get(g.awayId)!,
       kickoff_at: g.startDate,
