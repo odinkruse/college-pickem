@@ -24,13 +24,14 @@ export type SyncResult =
 
 /**
  * Runs one sync and records it in sync_runs (start, finish, CFBD calls used, quota left).
- * `week` is required for "results" and ignored otherwise. Never throws: failures come back
+ * `week` is required for "results", optional for "games" (just that week), ignored otherwise. Never throws: failures come back
  * as `{ ok: false }` and are logged on the run row.
  */
 export async function runSync(kind: SyncKind, year: number, week?: number): Promise<SyncResult> {
   const db = createAdminClient();
   const usage = newUsage();
-  const runWeek = kind === "results" ? week : undefined;
+  // Results always need a week; games may take one (refresh just that week's kickoff times).
+  const runWeek = kind === "results" || kind === "games" ? week : undefined;
 
   const season = must(
     await db.from("seasons").upsert({ year }, { onConflict: "year" }).select("id").single(),

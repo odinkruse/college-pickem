@@ -81,6 +81,27 @@ player CFBD doesn't have). Code: `src/lib/admin/forms.ts` (pure parsing, tested)
 - Hand-added players have no `cfbd_id`, so syncs never touch them, but their stats are manual too. If
   CFBD later lists the same person, the results sync creates a second player; pick the CFBD one.
 
+## Scheduling (Phase 9)
+
+Supabase `pg_cron` → `private.trigger_scheduled_job(job)` → `pg_net` POST to
+`https://college-pickem-phi.vercel.app/api/cron?job=daily|gameday` with `Authorization: Bearer <CRON_SECRET>`.
+The route replies 202 and does the work in `after()` (`maxDuration = 300`). URL and secret live in Supabase
+Vault (`pickem_cron_url`, `pickem_cron_secret`); `CRON_SECRET` must match in Vercel's env.
+
+| Job | When (UTC) | Does |
+|---|---|---|
+| `daily` | 10:00 every day (6 AM EDT / 5 AM EST) | results for weeks with a kickoff in the last 36 h, lines (if a game is within 10 days), upcoming week's games (kickoff times), sheet import for those weeks |
+| `gameday` | Sat 21:00, Sun 01:00 and 05:00 | same, minus the games refresh |
+
+Logic: `src/lib/scheduled.ts`; each step logs to `sync_runs`, and the run itself as kind `scheduled`
+(shown on `/admin` → Automatic updates, with a "Run now" button). Offseason runs make no CFBD calls.
+Budget in season ≈ 7 calls/day + 5 per Saturday-evening run ≈ 250–300/month of 1,000.
+Check pg_net responses: `select status_code, created from net._http_response order by created desc limit 5;`
+Change a schedule: `select cron.alter_job((select jobid from cron.job where jobname = 'pickem-daily'), schedule := '0 11 * * *');`
+
+Admin also has `/admin/picks` (change any member's pick; stored as a per-cell import override when the
+sheet has text in that cell) and a scoring-sheet comparison on `/admin/import` (`league_seasons.scoring_sheet_id`).
+
 ## Data model
 
 Source of truth: `supabase/migrations/`. Summary:
@@ -175,5 +196,5 @@ stat-source differences (CFBD's box score vs. what was hand-entered), not scorin
 | 6 | Stats sync + scoring + DNP review queue + history / burned list | ✅ done — results sync (4 calls/week), `/admin` review list, `/picks/season` |
 | 7 | Manual overrides admin | ✅ done — `/admin/games`, `/admin/games/[id]`, `/admin/players` |
 | 8 | League pick import (Josh's sheet) + standings — backfill 2026 for testing | ✅ done — `/admin/import`, `/standings`; weeks 1–10 imported |
-| 9 | Scheduling: Supabase `pg_cron` → sync endpoint (Vercel Hobby cron is daily only) | |
+| 9 | Scheduling: Supabase `pg_cron` → sync endpoint (Vercel Hobby cron is daily only) | ✅ done — `/api/cron`, daily + Saturday-evening runs |
 | 10 | Multi-user: Supabase Auth, RLS policies, picks hidden until locked | |

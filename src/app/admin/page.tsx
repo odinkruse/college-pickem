@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ALL_SYNC_KINDS } from "@/lib/sync/run";
 import { AdminNav } from "./admin-nav";
 import { ReviewButtons } from "./review-item";
+import { RunScheduledButton } from "./run-scheduled";
 import { SyncPanel } from "./sync-panel";
 
 const SLOT_LABEL = { QB: "QB", RB: "RB", WRTE: "WR/TE" } as const;
@@ -45,7 +46,7 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
   const seasonId = season?.id ?? -1;
   const count = async (query: PromiseLike<{ count: number | null }>) => (await query).count ?? 0;
 
-  const [fbsTeams, fcsTeams, games, completed, players, lines, runsResult, quotaResult, reviewResult, { weeks, current }] = await Promise.all([
+  const [fbsTeams, fcsTeams, games, completed, players, lines, runsResult, quotaResult, reviewResult, { weeks, current }, scheduledResult] = await Promise.all([
     count(db.from("team_seasons").select("*", { count: "exact", head: true }).eq("season_id", seasonId).eq("classification", "fbs")),
     count(db.from("team_seasons").select("*", { count: "exact", head: true }).eq("season_id", seasonId).eq("classification", "fcs")),
     count(db.from("games").select("*", { count: "exact", head: true }).eq("season_id", seasonId)),
@@ -77,7 +78,18 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
       .not("review_reason", "is", null)
       .order("week"),
     seasonWeeks(year, new Date()),
+    db
+      .from("sync_runs")
+      .select("status, started_at, finished_at, summary, error")
+      .eq("kind", "scheduled")
+      .order("started_at", { ascending: false })
+      .limit(5),
   ]);
+  const scheduled = (scheduledResult.data ?? []).map((r) => ({
+    ...r,
+    job: (r.summary as { job?: string } | null)?.job ?? "?",
+    steps: ((r.summary as { steps?: string[] } | null)?.steps ?? []) as string[],
+  }));
 
   const runs = runsResult.data ?? [];
   const lastRun = Object.fromEntries(ALL_SYNC_KINDS.map((kind) => [kind, runs.find((r) => r.kind === kind) ?? null]));
@@ -160,6 +172,36 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
                     </div>
                   </div>
                   <ReviewButtons pickId={r.id} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Automatic updates</CardTitle>
+          <CardDescription>
+            Supabase runs this daily at 6 AM ET, plus Saturday ~5 PM, 9 PM and 1 AM ET: results for weeks with games in the last 36
+            hours, lines, the upcoming week&apos;s kickoff times, then the league sheet import. Nothing runs when there are no games.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <RunScheduledButton />
+          {scheduled.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No automatic runs yet.</p>
+          ) : (
+            <ul className="flex flex-col divide-y text-sm">
+              {scheduled.map((r) => (
+                <li key={r.started_at} className="flex items-start justify-between gap-4 py-2">
+                  <div className="min-w-0">
+                    <div className="font-medium">
+                      {formatTime(r.finished_at ?? r.started_at)} <span className="font-normal text-muted-foreground">· {r.job}</span>
+                    </div>
+                    <div className="break-words text-muted-foreground">{r.steps.length ? r.steps.join(" · ") : (r.error ?? "running…")}</div>
+                  </div>
+                  <Badge variant={r.status === "ok" ? "secondary" : r.status === "error" ? "destructive" : "outline"}>{r.status}</Badge>
                 </li>
               ))}
             </ul>

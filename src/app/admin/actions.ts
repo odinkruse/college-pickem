@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { isAdminAuthorization } from "@/lib/admin-auth";
 import { resolveReview } from "@/lib/picks/scoring";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { runScheduled } from "@/lib/scheduled";
 import { runSync, SYNC_KINDS, type SyncKind, type SyncResult } from "@/lib/sync/run";
 
 export type SyncActionState = { ok: boolean; lines: string[] } | null;
@@ -41,7 +42,7 @@ export async function syncAction(_prev: SyncActionState, formData: FormData): Pr
 
   const results: SyncResult[] = [];
   for (const k of kinds) {
-    const result = await runSync(k, year, week);
+    const result = await runSync(k, year, k === "results" ? week : undefined);
     results.push(result);
     if (!result.ok) break;
   }
@@ -72,4 +73,12 @@ export async function resolveReviewAction(pickId: number, played: boolean): Prom
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
+}
+
+/** Runs the scheduled "daily" job now (the same thing pg_cron triggers each morning). */
+export async function runScheduledAction(): Promise<{ ok: boolean; message: string }> {
+  if (!(await isAdmin())) return { ok: false, message: "Not authorized." };
+  const steps = await runScheduled("daily");
+  revalidatePath("/admin", "layout");
+  return { ok: !steps.some((s) => s.includes("failed")), message: steps.join(" · ") };
 }
