@@ -89,9 +89,15 @@ export function validatePick(c: Candidate, ctx: PickContext): Violation[] {
     add("slot_locked", `Your ${SLOT_LABEL[ctx.slot]} pick for this week is already locked.`);
   }
 
-  // Single use: any non-DNP pick of this player, other than the pick being replaced.
+  // Single use: any non-DNP pick of this player, other than the pick being replaced. Championship
+  // week (the last week) waives it for other weeks: anyone playing can be picked, used before or not,
+  // though still only once that week.
   const used = ctx.entryPicks.find(
-    (p) => p.playerId === c.playerId && p.status !== "dnp" && !(p.week === ctx.week && p.slot === ctx.slot),
+    (p) =>
+      p.playerId === c.playerId &&
+      p.status !== "dnp" &&
+      !(p.week === ctx.week && p.slot === ctx.slot) &&
+      (ctx.weekRule !== "championship" || p.week === ctx.week),
   );
   if (used) add("already_used", `Already used in week ${used.week}.`);
 

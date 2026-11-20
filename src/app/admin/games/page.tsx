@@ -47,7 +47,6 @@ async function WeekGames({ searchParams }: { searchParams: PageProps<"/admin/gam
          game_lines(provider, spread_home, source)`,
       )
       .eq("season_id", season.id)
-      .eq("season_type", "regular")
       .eq("week", week)
       .order("kickoff_at")
       .order("id"),

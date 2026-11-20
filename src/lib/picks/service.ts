@@ -118,7 +118,6 @@ export async function loadWeekContext(db: Db, year: number, week: number, profil
          game_lines(provider, spread_home, source)`,
       )
       .eq("season_id", seasonId)
-      .eq("season_type", "regular")
       .eq("week", week)
       .order("kickoff_at"),
     db

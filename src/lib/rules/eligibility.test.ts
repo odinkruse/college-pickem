@@ -144,6 +144,16 @@ describe("single use", () => {
     expect(codes(candidate(1, g), ctx({ entryPicks: [dnp] }))).toEqual([]);
   });
 
+  it("Championship week allows a player used in an earlier week", () => {
+    const used = pick({ week: 5, slot: "QB", playerId: 1, status: "final", lockAt: EARLIER });
+    expect(codes(candidate(1, g), ctx({ weekRule: "championship", entryPicks: [used] }))).toEqual([]);
+  });
+
+  it("Championship week still allows a player only once that week", () => {
+    const otherSlot = pick({ slot: "WRTE", playerId: 1 });
+    expect(codes(candidate(1, g, "QB"), ctx({ weekRule: "championship", entryPicks: [otherSlot] }))).toEqual(["already_used"]);
+  });
+
   it("re-picking the same player in the same slot (no change) is fine", () => {
     const same = pick({ slot: "QB", playerId: 1 });
     expect(codes(candidate(1, g), ctx({ entryPicks: [same] }))).toEqual([]);

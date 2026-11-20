@@ -46,7 +46,7 @@ export async function getSiteTheme(): Promise<SiteTheme> {
   const year = seasonYearFor(new Date());
   const [{ rows, weeks }, unfinished] = await Promise.all([
     loadStandings(db, year),
-    db.from("games").select("week, seasons!inner(year)").eq("seasons.year", year).eq("season_type", "regular").eq("completed", false),
+    db.from("games").select("week, seasons!inner(year)").eq("seasons.year", year).eq("completed", false),
   ]);
   const unfinishedWeeks = new Set(must(unfinished, "load unfinished games").map((g) => g.week));
 

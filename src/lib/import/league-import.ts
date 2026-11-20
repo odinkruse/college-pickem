@@ -302,7 +302,6 @@ async function loadReference(db: Db, seasonId: number, leagueId: number, weeks: 
         .from("games")
         .select("id, week, kickoff_at, start_time_tbd, home_team_id, away_team_id, game_lines(provider, spread_home, source)")
         .eq("season_id", seasonId)
-        .eq("season_type", "regular")
         .in("week", weeks)
         .order("id")
         .range(from, to),

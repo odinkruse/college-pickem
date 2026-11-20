@@ -145,13 +145,18 @@ export async function getCalendar(year: number): Promise<CalendarWeek[]> {
 export const fetchTeams = (year: number, usage?: CfbdUsage) =>
   cfbdFetch<CfbdTeam[]>("/teams", { year }, usage);
 
-/** Regular-season games involving at least one team of the given classification (one week, or all). */
-export const fetchGames = (year: number, classification: CfbdClassification, usage?: CfbdUsage, week?: number) =>
-  cfbdFetch<CfbdGame[]>("/games", { year, week, classification, seasonType: "regular" }, usage);
+export type SeasonType = "regular" | "postseason";
 
-/** Box-score player stats for one week, for games involving the given classification. */
-export const fetchBoxScores = (year: number, week: number, classification: CfbdClassification, usage?: CfbdUsage) =>
-  cfbdFetch<CfbdBoxScore[]>("/games/players", { year, week, classification, seasonType: "regular" }, usage);
+/** Games involving at least one team of the given classification (one week, or all), regular season by default. */
+export const fetchGames = (year: number, classification: CfbdClassification, usage?: CfbdUsage, week?: number, seasonType: SeasonType = "regular") =>
+  cfbdFetch<CfbdGame[]>("/games", { year, week, classification, seasonType }, usage);
+
+/** Box-score player stats for one week (CFBD's numbering for that season type), for games involving the given classification. */
+export const fetchBoxScores = (year: number, week: number, classification: CfbdClassification, usage?: CfbdUsage, seasonType: SeasonType = "regular") =>
+  cfbdFetch<CfbdBoxScore[]>("/games/players", { year, week, classification, seasonType }, usage);
+
+/** Season calendar, uncached and counted against quota (for syncs, which run outside Next's cache). */
+export const fetchCalendar = (year: number, usage?: CfbdUsage) => cfbdFetch<CalendarWeek[]>("/calendar", { year }, usage);
 
 /** Every roster in one call (~30k players, ~9 MB). */
 export const fetchRosters = (year: number, usage?: CfbdUsage) =>

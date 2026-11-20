@@ -3,7 +3,7 @@
 
 export type Classification = "fbs" | "fcs" | "ii" | "iii";
 export type Slot = "QB" | "RB" | "WRTE";
-export type WeekRule = "standard" | "conference" | "underdog";
+export type WeekRule = "standard" | "conference" | "underdog" | "championship";
 export type PickStatus = "pending" | "locked" | "final" | "dnp";
 
 export type ScoringRules = {

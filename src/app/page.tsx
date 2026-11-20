@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Countdown } from "@/components/countdown";
+import { SpecialWeekBanner } from "@/components/special-week";
 import { StandingsTable } from "@/components/standings-table";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,15 +62,19 @@ async function Scoreboard() {
   const now = new Date();
   const year = seasonYearFor(now);
   const [{ current }, viewer] = await Promise.all([seasonWeeks(year, now), getViewer()]);
-  const games = must(
-    await createAdminClient()
-      .from("games")
-      .select("kickoff_at, completed, seasons!inner(year)")
+  const db = createAdminClient();
+  const [gamesResult, ruleResult] = await Promise.all([
+    db.from("games").select("kickoff_at, completed, seasons!inner(year)").eq("seasons.year", year).eq("week", current),
+    db
+      .from("league_weeks")
+      .select("rule, leagues!inner(slug), seasons!inner(year)")
+      .eq("leagues.slug", "main")
       .eq("seasons.year", year)
-      .eq("season_type", "regular")
-      .eq("week", current),
-    "load this week's games",
-  );
+      .eq("week", current)
+      .maybeSingle(),
+  ]);
+  const games = must(gamesResult, "load this week's games");
+  const rule = ruleResult.data?.rule ?? "standard";
   const nextKickoff = games
     .map((g) => g.kickoff_at)
     .filter((k) => new Date(k) > now)
@@ -77,24 +82,27 @@ async function Scoreboard() {
   const headline = nextKickoff ? "Picks are open" : games.some((g) => !g.completed) ? "Games in progress" : `Week ${current} is final`;
 
   return (
-    <section className="panel flex flex-wrap items-center justify-between gap-6 p-6 sm:p-8">
-      <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-4">
-        <p className="font-pixel text-[10px] text-accent">
-          {year} season · Week {current}
-        </p>
-        <h1 className="text-2xl text-primary sm:text-3xl">{headline}</h1>
-        <p className="text-muted-foreground">QB · RB · WR/TE. One shot at each player all season; each pick locks at its kickoff.</p>
-      </div>
-      <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-[0_1_280px]">
-        {nextKickoff && (
-          <div className="flex flex-col gap-2">
-            <p className="font-pixel text-[8px] text-muted-foreground">Next kickoff in</p>
-            <Countdown target={nextKickoff} />
-          </div>
-        )}
-        <CallToAction signedIn={!!viewer} member={!!viewer?.profileId} />
-      </div>
-    </section>
+    <>
+      <SpecialWeekBanner rule={rule} week={current} />
+      <section className="panel flex flex-wrap items-center justify-between gap-6 p-6 sm:p-8">
+        <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-4">
+          <p className="font-pixel text-[10px] text-accent">
+            {year} season · Week {current}
+          </p>
+          <h1 className="text-2xl text-primary sm:text-3xl">{headline}</h1>
+          <p className="text-muted-foreground">QB · RB · WR/TE. One shot at each player all season; each pick locks at its kickoff.</p>
+        </div>
+        <div className="flex w-full flex-col gap-4 sm:w-auto sm:flex-[0_1_280px]">
+          {nextKickoff && (
+            <div className="flex flex-col gap-2">
+              <p className="font-pixel text-[8px] text-muted-foreground">Next kickoff in</p>
+              <Countdown target={nextKickoff} />
+            </div>
+          )}
+          <CallToAction signedIn={!!viewer} member={!!viewer?.profileId} />
+        </div>
+      </section>
+    </>
   );
 }
 

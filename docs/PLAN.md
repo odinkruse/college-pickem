@@ -146,6 +146,23 @@ sheet has text in that cell) and a scoring-sheet comparison on `/admin/import` (
   `PALETTES.field`.
 - Dev tip: `use cache` survives code edits in `next dev`; a hard refresh (`Cache-Control: no-cache`) skips it.
 
+## Season end (Phase 13)
+- The league plays weeks 1–`league_seasons.last_week` (14 in 2026). `seasonWeeks()` and the scheduler stop
+  there, so CFBD's week 15 (Army–Navy) and bowls are ignored.
+- Week 13: FBS rivalry week plus the FCS playoff first round; week 14 ("Championship week"): FBS conference
+  championships plus FCS playoff second round. CFBD files the FCS playoffs as postseason with its own week
+  numbers, so games syncs from week 12 on (and whole-season syncs) also fetch FCS postseason games and file
+  each under the regular-season calendar week containing its kickoff (`postseasonWeek()`); later rounds are
+  dropped. Results syncs fetch those games' postseason box scores too (+1 call per playoff week).
+- The daily scheduled job refreshes the whole season's games (same 2 calls, +2 once the bracket exists), so
+  conference championship games and the bracket appear as CFBD adds them.
+- `week_rule` `championship`: the one-use rule is waived for other weeks (a player can still fill only one
+  slot that week). In the database, `picks.reusable` mirrors the week's rule (triggers on picks and
+  league_weeks) and the one-use unique index ignores reusable picks.
+- Scheduled imports cover any week with games in the last 7 days, so a sheet filled in late still imports.
+- Did-not-play in Josh's sheet: he blanks the cell, so the import has no pick for that slot and the player
+  stays unused. The admin review queue is only for picks still in the sheet whose player has no stat line.
+
 ## Data model
 
 Source of truth: `supabase/migrations/`. Summary:
@@ -245,3 +262,4 @@ stat-source differences (CFBD's box score vs. what was hand-entered), not scorin
 | 10 | Multi-user: Supabase Auth (Google + email code), invite links, roles, app-vs-sheet picks | ✅ done — Google and email-code sign-in verified in production |
 | 11 | Retro gridiron theme: field background, scoreboard panels, pixel headings (Press Start 2P) + IBM Plex Mono | ✅ done — palettes in `globals.css` (`field` default; `night`, `arcade` via `data-palette` on `<html>`) |
 | 12 | Champion's colors: each member's favorite team; last week's top scorer (tie → higher season total) sets next week's palette; special weeks use night/arcade | ✅ built — `/picks/team`, team field on `/admin/members`, home banner |
+| 13 | Season end: 14-week season (`league_seasons.last_week`), FCS playoff games in weeks 13–14, Championship week (week 14: anyone playing, used or not), special-week banners | ✅ built |

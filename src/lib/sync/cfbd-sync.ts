@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   fetchBoxScores,
+  fetchCalendar,
   fetchGames,
   fetchLines,
   fetchRosters,
@@ -13,7 +14,7 @@ import { scoreWeek } from "@/lib/picks/scoring";
 import { parseBoxScores, type ParsedLine } from "./box-score";
 import type { Database, TablesInsert } from "@/lib/supabase/database.types";
 import { chunks, dedupeBy, must, ok, selectAll } from "@/lib/supabase/helpers";
-import { leagueWeeks } from "./weeks";
+import { leagueWeeks, postseasonWeek } from "./weeks";
 
 type Db = SupabaseClient<Database>;
 /** `week` limits games to one week and is required for the results sync. */
@@ -82,16 +83,50 @@ export async function syncTeams({ db, year, seasonId, usage }: SyncContext): Pro
 // Games (2 CFBD calls: FBS and FCS lists; FBS-vs-FCS games appear in both)
 // ---------------------------------------------------------------------------
 
-export async function syncGames({ db, year, seasonId, usage, week }: SyncContext): Promise<SyncSummary> {
+/** From this week on, a games sync also looks for FCS playoff games (CFBD files them as postseason). */
+const FCS_PLAYOFFS_FROM_WEEK = 12;
+
+export async function syncGames(ctx: SyncContext): Promise<SyncSummary> {
+  return (await syncGamesWithPlayoffs(ctx)).summary;
+}
+
+/**
+ * Regular-season FBS and FCS games, plus FCS playoff games that fall inside the regular-season calendar
+ * (the league's last weeks; later rounds are dropped). Also returns, per league week, the CFBD
+ * postseason week numbers of its playoff games, which the results sync needs to fetch their box scores.
+ */
+async function syncGamesWithPlayoffs({ db, year, seasonId, usage, week }: SyncContext) {
   const teamIds = await loadTeamIds(db);
   if (teamIds.size === 0) throw new Error("No teams yet. Sync teams first.");
 
-  const [fbs, fcs] = await Promise.all([fetchGames(year, "fbs", usage, week), fetchGames(year, "fcs", usage, week)]);
-  const games = dedupeBy([...fbs, ...fcs], (g) => g.id).filter((g) => g.season === year);
+  const withPlayoffs = week === undefined || week >= FCS_PLAYOFFS_FROM_WEEK;
+  const [fbs, fcs, playoffs] = await Promise.all([
+    fetchGames(year, "fbs", usage, week),
+    fetchGames(year, "fcs", usage, week),
+    withPlayoffs ? fetchGames(year, "fcs", usage, undefined, "postseason") : Promise.resolve([]),
+  ]);
+  const regular = dedupeBy([...fbs, ...fcs], (g) => g.id).filter((g) => g.season === year);
+  const weekOf = leagueWeeks(regular); // week 0 games that CFBD files under week 1
+
+  // Playoff games go in the league week whose dates hold their kickoff (one calendar call, only once
+  // the bracket exists); rounds after the regular season aren't stored.
+  const postseasonCfbdWeeks = new Map<number, Set<number>>();
+  const postseason: CfbdGame[] = [];
+  const playoffGames = playoffs.filter((g) => g.season === year && (g.homeClassification === "fcs" || g.awayClassification === "fcs"));
+  if (playoffGames.length) {
+    const calendar = await fetchCalendar(year, usage);
+    for (const g of playoffGames) {
+      const w = postseasonWeek(g.startDate, calendar);
+      if (w === null || (week !== undefined && w !== week)) continue;
+      weekOf.set(g.id, w);
+      postseason.push(g);
+      postseasonCfbdWeeks.set(w, (postseasonCfbdWeeks.get(w) ?? new Set()).add(g.week));
+    }
+  }
+  const games = [...regular, ...postseason];
 
   // An opponent CFBD's /teams didn't list (rare): create a bare team so the game can be stored.
   const created = await createMissingTeams(db, games, teamIds, seasonId);
-  const weekOf = leagueWeeks(games); // week 0 games that CFBD files under week 1
 
   for (const batch of chunks(games)) {
     const rows: TablesInsert<"games">[] = batch.map((g) => ({
@@ -112,12 +147,14 @@ export async function syncGames({ db, year, seasonId, usage, week }: SyncContext
     ok(await db.from("games").upsert(rows, { onConflict: "cfbd_id" }), "upsert games");
   }
 
-  return {
+  const summary: SyncSummary = {
     games: games.length,
     completed: games.filter((g) => g.completed).length,
     timeTbd: games.filter((g) => g.startTimeTBD && !g.completed).length,
     teamsCreated: created,
+    ...(postseason.length ? { fcsPlayoffGames: postseason.length } : {}),
   };
+  return { summary, postseasonCfbdWeeks };
 }
 
 async function createMissingTeams(db: Db, games: CfbdGame[], teamIds: Map<number, number>, seasonId: number) {
@@ -261,24 +298,22 @@ export async function syncResults(ctx: SyncContext): Promise<SyncSummary> {
   const { db, year, seasonId, usage, week } = ctx;
   if (week === undefined) throw new Error("The results sync needs a week.");
 
-  const gamesSummary = await syncGames(ctx); // fresh scores, completed flags, kickoff changes
+  // Fresh scores, completed flags and kickoff changes (plus this week's FCS playoff games, if any).
+  const { summary: gamesSummary, postseasonCfbdWeeks } = await syncGamesWithPlayoffs(ctx);
 
   const weekGames = must(
-    await db
-      .from("games")
-      .select("id, cfbd_id, home_team_id, away_team_id")
-      .eq("season_id", seasonId)
-      .eq("season_type", "regular")
-      .eq("week", week),
+    await db.from("games").select("id, cfbd_id, home_team_id, away_team_id").eq("season_id", seasonId).eq("week", week),
     "load week games",
   );
   const gameByCfbd = new Map(weekGames.map((g) => [g.cfbd_id, g]));
 
-  const [fbs, fcs] = await Promise.all([
+  const playoffWeeks = [...(postseasonCfbdWeeks.get(week) ?? [])];
+  const boxScoreLists = await Promise.all([
     fetchBoxScores(year, week, "fbs", usage),
     fetchBoxScores(year, week, "fcs", usage),
+    ...playoffWeeks.map((w) => fetchBoxScores(year, w, "fcs", usage, "postseason")),
   ]);
-  const boxScores = dedupeBy([...fbs, ...fcs], (b) => b.id).filter((b) => gameByCfbd.has(b.id));
+  const boxScores = dedupeBy(boxScoreLists.flat(), (b) => b.id).filter((b) => gameByCfbd.has(b.id));
   const lines = parseBoxScores(boxScores);
 
   // Map CFBD athlete ids to players; create any the roster sync didn't have (no position, so they

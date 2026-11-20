@@ -249,18 +249,21 @@ export type Database = {
       }
       league_seasons: {
         Row: {
+          last_week: number
           league_id: number
           pick_sheet_id: string | null
           scoring_sheet_id: string | null
           season_id: number
         }
         Insert: {
+          last_week?: number
           league_id: number
           pick_sheet_id?: string | null
           scoring_sheet_id?: string | null
           season_id: number
         }
         Update: {
+          last_week?: number
           league_id?: number
           pick_sheet_id?: string | null
           scoring_sheet_id?: string | null
@@ -391,6 +394,7 @@ export type Database = {
           id: number
           player_id: number
           points: number | null
+          reusable: boolean
           review_reason: string | null
           slot: Database["public"]["Enums"]["pick_slot"]
           spread_at_pick: number | null
@@ -407,6 +411,7 @@ export type Database = {
           id?: never
           player_id: number
           points?: number | null
+          reusable?: boolean
           review_reason?: string | null
           slot: Database["public"]["Enums"]["pick_slot"]
           spread_at_pick?: number | null
@@ -423,6 +428,7 @@ export type Database = {
           id?: never
           player_id?: number
           points?: number | null
+          reusable?: boolean
           review_reason?: string | null
           slot?: Database["public"]["Enums"]["pick_slot"]
           spread_at_pick?: number | null
@@ -816,7 +822,7 @@ export type Database = {
       pick_slot: "QB" | "RB" | "WRTE"
       pick_status: "pending" | "locked" | "final" | "dnp"
       season_type: "regular" | "postseason"
-      week_rule: "standard" | "conference" | "underdog"
+      week_rule: "standard" | "conference" | "underdog" | "championship"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -950,7 +956,7 @@ export const Constants = {
       pick_slot: ["QB", "RB", "WRTE"],
       pick_status: ["pending", "locked", "final", "dnp"],
       season_type: ["regular", "postseason"],
-      week_rule: ["standard", "conference", "underdog"],
+      week_rule: ["standard", "conference", "underdog", "championship"],
     },
   },
 } as const

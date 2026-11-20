@@ -10,7 +10,8 @@ import type { Slot } from "@/lib/rules";
 import { seasonWeeks } from "@/lib/season";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { RemovePickButton, WeekRuleSelect } from "./controls";
-import { formatSpread, RULE_HINT, RULE_LABEL, SLOT_LABEL } from "./format";
+import { SpecialWeekBanner } from "@/components/special-week";
+import { formatSpread, RULE_HINT, SLOT_LABEL } from "./format";
 import { PickDialog } from "./pick-dialog";
 
 // The signed-in member's picks for one week (picks/layout.tsx guarantees a linked member).
@@ -50,11 +51,7 @@ async function PicksWeek({ searchParams }: { searchParams: PageProps<"/picks">["
               {year} season · {ctx.games.length} games · {RULE_HINT[ctx.weekRule]}
             </p>
           </div>
-          {viewer.isAdmin ? (
-            <WeekRuleSelect year={year} week={week} rule={ctx.weekRule} />
-          ) : (
-            ctx.weekRule !== "standard" && <span className="bg-accent px-2 py-1.5 font-pixel text-[9px] text-accent-foreground">{RULE_LABEL[ctx.weekRule]}</span>
-          )}
+          {viewer.isAdmin ? <WeekRuleSelect year={year} week={week} rule={ctx.weekRule} /> : null}
         </div>
         <nav aria-label="Weeks" className="flex flex-wrap gap-1.5">
           {weeks.map((w) => (
@@ -71,6 +68,7 @@ async function PicksWeek({ searchParams }: { searchParams: PageProps<"/picks">["
           ))}
         </nav>
       </header>
+      <SpecialWeekBanner rule={ctx.weekRule} week={week} />
 
       <div className="grid gap-5 sm:grid-cols-3">
         {SLOTS.map((slot) => (
@@ -90,7 +88,7 @@ async function PicksWeek({ searchParams }: { searchParams: PageProps<"/picks">["
 
 function SlotCard({ ctx, slot, pick, now }: { ctx: WeekContext; slot: Slot; pick?: SeasonPick; now: Date }) {
   const game = pick ? ctx.gameByTeam.get(pick.teamId) : undefined;
-  const weekOver = ctx.games.every((g) => now >= g.lockAt);
+  const weekOver = ctx.games.length > 0 && ctx.games.every((g) => now >= g.lockAt); // no games yet (week 14 before CFBD adds them) isn't over
   const locked = pick ? now >= pick.lockAt : weekOver;
   const warnings = pick ? pickWarnings(ctx, pick, now) : [];
   const showSpread = ctx.weekRule === "underdog";
@@ -112,7 +110,10 @@ function SlotCard({ ctx, slot, pick, now }: { ctx: WeekContext; slot: Slot; pick
           <p className="text-muted-foreground">{weekOver ? "No pick made." : "No pick yet."}</p>
         ) : (
           <>
-            <div aria-hidden="true" className="flex size-14 items-center justify-center border-[3px] border-outline bg-field font-pixel text-sm text-white">
+            <div
+              aria-hidden="true"
+              className="flex size-14 items-center justify-center border-[3px] border-outline bg-field font-pixel text-sm text-white"
+            >
               {initials}
             </div>
             <div className="text-lg leading-tight font-bold">
@@ -120,8 +121,7 @@ function SlotCard({ ctx, slot, pick, now }: { ctx: WeekContext; slot: Slot; pick
             </div>
             {game && (
               <div className="text-sm text-muted-foreground">
-                <span className="text-foreground">{pick.team.school}</span>{" "}
-                {game.home.teamId === pick.teamId ? "vs" : "@"}{" "}
+                <span className="text-foreground">{pick.team.school}</span> {game.home.teamId === pick.teamId ? "vs" : "@"}{" "}
                 {(game.home.teamId === pick.teamId ? game.awayTeam : game.homeTeam).school}
                 {" · "}
                 {formatSpread(teamSpread(game, pick.teamId))}
