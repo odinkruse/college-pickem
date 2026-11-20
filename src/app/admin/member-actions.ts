@@ -1,9 +1,11 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { seasonYearFor } from "@/lib/cfbd";
+import { findTeam, loadTeamOptions } from "@/lib/teams";
+import { THEME_TAG } from "@/lib/theme/champion";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { must, ok } from "@/lib/supabase/helpers";
 import type { FormState } from "./override-actions";
@@ -85,5 +87,18 @@ export async function addMemberAction(_prev: FormState, form: FormData): Promise
     ok(await db.from("league_members").insert({ league_id: league, profile_id: profile.id }), "add to league");
     ok(await db.from("entries").insert({ league_id: league, season_id: season.id, profile_id: profile.id }), "create entry");
     return done(`Added ${name}. Create an invite link for them below.`);
+  });
+}
+
+/** Sets a member's favorite team by school name (blank clears it), e.g. for members who haven't signed in. */
+export async function setMemberTeamAction(_prev: FormState, form: FormData): Promise<FormState> {
+  return run(async () => {
+    await requireAdmin();
+    const typed = String(form.get("team") ?? "").trim();
+    const team = typed ? findTeam(await loadTeamOptions(seasonYearFor(new Date())), typed) : undefined;
+    if (typed && !team) return { ok: false, message: `No FBS/FCS school called "${typed}". Pick one from the list.` };
+    ok(await createAdminClient().from("profiles").update({ favorite_team_id: team?.id ?? null }).eq("id", String(form.get("profile"))), "save favorite team");
+    updateTag(THEME_TAG);
+    return done(team ? `Favorite team: ${team.school}.` : "Favorite team cleared.");
   });
 }

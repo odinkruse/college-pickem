@@ -619,6 +619,7 @@ export type Database = {
           auth_user_id: string | null
           created_at: string
           display_name: string
+          favorite_team_id: number | null
           id: string
           invite_code: string | null
         }
@@ -626,6 +627,7 @@ export type Database = {
           auth_user_id?: string | null
           created_at?: string
           display_name: string
+          favorite_team_id?: number | null
           id?: string
           invite_code?: string | null
         }
@@ -633,10 +635,19 @@ export type Database = {
           auth_user_id?: string | null
           created_at?: string
           display_name?: string
+          favorite_team_id?: number | null
           id?: string
           invite_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_favorite_team_id_fkey"
+            columns: ["favorite_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       seasons: {
         Row: {
@@ -747,7 +758,9 @@ export type Database = {
       teams: {
         Row: {
           abbreviation: string | null
+          alt_color: string | null
           cfbd_id: number
+          color: string | null
           created_at: string
           id: number
           logo_url: string | null
@@ -757,7 +770,9 @@ export type Database = {
         }
         Insert: {
           abbreviation?: string | null
+          alt_color?: string | null
           cfbd_id: number
+          color?: string | null
           created_at?: string
           id?: never
           logo_url?: string | null
@@ -767,7 +782,9 @@ export type Database = {
         }
         Update: {
           abbreviation?: string | null
+          alt_color?: string | null
           cfbd_id?: number
+          color?: string | null
           created_at?: string
           id?: never
           logo_url?: string | null

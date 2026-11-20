@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getViewer } from "@/lib/auth";
+import { seasonYearFor } from "@/lib/cfbd";
+import { loadTeamOptions } from "@/lib/teams";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { must } from "@/lib/supabase/helpers";
 import { ActionForm } from "../action-form";
 import { AdminNav } from "../admin-nav";
 import { CopyButton } from "../copy-button";
-import { addMemberAction, createInviteAction, setRoleAction, unlinkAction } from "../member-actions";
+import { addMemberAction, createInviteAction, setMemberTeamAction, setRoleAction, unlinkAction } from "../member-actions";
 
 // League members: who has signed in, invite links for those who haven't, and admin roles.
 export default function MembersPage() {
@@ -29,9 +31,13 @@ async function Members() {
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
   const viewer = await getViewer();
   const db = createAdminClient();
-  const [membersResult, usersResult] = await Promise.all([
-    db.from("league_members").select("role, sheet_tab, profiles(id, display_name, auth_user_id, invite_code), leagues!inner(slug)").eq("leagues.slug", "main"),
+  const [membersResult, usersResult, teamOptions] = await Promise.all([
+    db
+      .from("league_members")
+      .select("role, sheet_tab, profiles(id, display_name, auth_user_id, invite_code, teams(school)), leagues!inner(slug)")
+      .eq("leagues.slug", "main"),
     db.auth.admin.listUsers({ perPage: 1000 }),
+    loadTeamOptions(seasonYearFor(new Date())),
   ]);
   const members = must(membersResult, "load members").sort((a, b) => a.profiles.display_name.localeCompare(b.profiles.display_name));
   const emailOf = new Map((usersResult.data?.users ?? []).map((u) => [u.id, u.email ?? u.phone ?? "signed in"]));
@@ -43,9 +49,16 @@ async function Members() {
         <h1 className="text-xl sm:text-2xl">Members</h1>
         <p className="text-sm text-muted-foreground">
           {members.length} members · {linked} signed in. Send each person their own invite link: they sign in (Google or an emailed code),
-          then the link ties that login to their entry. Each link works once.
+          then the link ties that login to their entry. Each link works once. Favorite teams decide the champion&apos;s colors; members can
+          also set their own under My team.
         </p>
       </header>
+
+      <datalist id="team-options">
+        {teamOptions.map((t) => (
+          <option key={t.id} value={t.school} />
+        ))}
+      </datalist>
 
       <Card>
         <CardContent className="flex flex-col divide-y">
@@ -97,6 +110,20 @@ async function Members() {
                     )}
                   </div>
                 </div>
+                <ActionForm action={setMemberTeamAction} className="flex flex-wrap items-center gap-2">
+                  <input type="hidden" name="profile" value={p.id} />
+                  <Input
+                    name="team"
+                    list="team-options"
+                    defaultValue={p.teams?.school ?? ""}
+                    placeholder="Favorite team"
+                    aria-label={`${p.display_name}'s favorite team`}
+                    className="h-8 w-56"
+                  />
+                  <Button type="submit" size="xs" variant="outline">
+                    Save team
+                  </Button>
+                </ActionForm>
                 {!p.auth_user_id && p.invite_code && (
                   <div className="flex items-center gap-2">
                     <code className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 text-xs">{`${origin}/join/${p.invite_code}`}</code>

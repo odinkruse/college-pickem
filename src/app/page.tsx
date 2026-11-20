@@ -12,11 +12,15 @@ import { seasonWeeks } from "@/lib/season";
 import { loadStandings } from "@/lib/standings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { must } from "@/lib/supabase/helpers";
+import { getSiteTheme } from "@/lib/theme/champion";
 
 // Public home page: this week's scoreboard, then the leaderboard.
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-8">
+      <Suspense fallback={null}>
+        <ChampionBanner />
+      </Suspense>
       <Suspense fallback={<section className="panel h-56" aria-label="Loading this week" />}>
         <Scoreboard />
       </Suspense>
@@ -25,6 +29,29 @@ export default function Home() {
         <Leaderboard />
       </Suspense>
     </main>
+  );
+}
+
+/** Whose colors the site is wearing this week, and why. */
+async function ChampionBanner() {
+  const { champion, week } = await getSiteTheme();
+  if (!champion || week === null) return null;
+  const { team } = champion;
+  return (
+    <section className="panel flex items-center gap-4 p-4 sm:p-5">
+      {team?.logoUrl && (
+        // eslint-disable-next-line @next/next/no-img-element -- small remote logo from CFBD's CDN
+        <img src={team.logoUrl} alt="" width={56} height={56} className="size-12 shrink-0 object-contain sm:size-14" />
+      )}
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <p className="font-pixel text-[9px] text-accent">Week {week} colors</p>
+        <p className="font-pixel text-sm leading-relaxed text-primary sm:text-base">{team ? team.school : "Champion"}</p>
+        <p className="text-sm text-muted-foreground">
+          {champion.name} put up {champion.points} in week {champion.week}
+          {team ? "." : ", but hasn't picked a favorite team yet."}
+        </p>
+      </div>
+    </section>
   );
 }
 

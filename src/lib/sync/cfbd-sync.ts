@@ -27,6 +27,12 @@ const SKILL_POSITIONS = new Set(["QB", "RB", "FB", "WR", "TE", "ATH"]);
 // Teams + conferences (1 CFBD call)
 // ---------------------------------------------------------------------------
 
+/** "#RRGGBB" → "#rrggbb"; anything else (missing, "null", 3-digit) → null, which the theme treats as no color. */
+function hexColor(value: string | null | undefined): string | null {
+  const v = value?.trim().toLowerCase() ?? "";
+  return /^#[0-9a-f]{6}$/.test(v) ? v : null;
+}
+
 export async function syncTeams({ db, year, seasonId, usage }: SyncContext): Promise<SyncSummary> {
   const teams = await fetchTeams(year, usage);
 
@@ -50,6 +56,8 @@ export async function syncTeams({ db, year, seasonId, usage }: SyncContext): Pro
       mascot: t.mascot,
       abbreviation: t.abbreviation,
       logo_url: t.logos?.[0] ?? null,
+      color: hexColor(t.color),
+      alt_color: hexColor(t.alternateColor),
     }));
     const saved = must(await db.from("teams").upsert(rows, { onConflict: "cfbd_id" }).select("id, cfbd_id"), "upsert teams");
     for (const t of saved) teamIds.set(t.cfbd_id, t.id);

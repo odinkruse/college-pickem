@@ -72,6 +72,9 @@ export type CfbdTeam = {
   conference: string | null;
   classification: CfbdClassification | null;
   logos: string[] | null;
+  /** School colors, "#rrggbb" (CFBD sometimes leaves these out or sends other formats). */
+  color?: string | null;
+  alternateColor?: string | null;
 };
 
 export type CfbdGame = {

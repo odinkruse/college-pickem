@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { THEME_TAG } from "@/lib/theme/champion";
 import { getViewer } from "@/lib/auth";
 import { resolveReview } from "@/lib/picks/scoring";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -47,6 +48,7 @@ export async function syncAction(_prev: SyncActionState, formData: FormData): Pr
 
   revalidatePath("/admin");
   revalidatePath("/picks", "layout");
+  updateTag(THEME_TAG); // scores changed: maybe a new champion
   return { ok: results.every((r) => r.ok), lines: results.map((r) => describe(r, week)) };
 }
 
@@ -67,6 +69,7 @@ export async function resolveReviewAction(pickId: number, played: boolean): Prom
     const summary = await resolveReview(createAdminClient(), pickId, played);
     revalidatePath("/admin");
     revalidatePath("/picks", "layout");
+    updateTag(THEME_TAG); // scores changed: maybe a new champion
     return summary.failed.length ? { ok: false, error: summary.failed.join("; ") } : { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };

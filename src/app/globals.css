@@ -51,7 +51,8 @@
 
 /* Retro gridiron theme. One dark palette for the whole site: the page is a striped field, content
    sits on near-black "scoreboard" panels with thick black outlines and hard shadows.
-   Palettes: field (default), night and arcade, picked by data-palette on <html>. */
+   These are the default (field) colors. Champion's colors and the night/arcade special-week palettes
+   override them from the root layout (src/lib/theme/palette.ts must stay in sync with this block). */
 @theme inline {
   --font-pixel: var(--font-press-start);
   --color-field: var(--background);
@@ -100,42 +101,6 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #34433a;
   --sidebar-ring: #ffd23f;
-}
-
-:root[data-palette="night"] {
-  --background: #10204a;
-  --field-2: #142757;
-  --card: #070a14;
-  --popover: #070a14;
-  --primary: #5fd4ff;
-  --secondary: #1a2340;
-  --muted: #1a2340;
-  --muted-foreground: #c3cfea;
-  --accent: #ffa62b;
-  --border: #2c3858;
-  --input: #46557a;
-  --ring: #5fd4ff;
-  --sidebar: #070a14;
-  --sidebar-primary: #5fd4ff;
-  --sidebar-ring: #5fd4ff;
-}
-
-:root[data-palette="arcade"] {
-  --background: #2a0f3b;
-  --field-2: #331248;
-  --card: #0b0612;
-  --popover: #0b0612;
-  --primary: #3dff8f;
-  --secondary: #261835;
-  --muted: #261835;
-  --muted-foreground: #dcc7e8;
-  --accent: #ff5ad9;
-  --border: #3f2c55;
-  --input: #5b4475;
-  --ring: #3dff8f;
-  --sidebar: #0b0612;
-  --sidebar-primary: #3dff8f;
-  --sidebar-ring: #3dff8f;
 }
 
 @layer base {

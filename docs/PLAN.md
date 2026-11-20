@@ -130,6 +130,22 @@ sheet has text in that cell) and a scoring-sheet comparison on `/admin/import` (
 4. Authentication → Sign In / Providers → Google: client ID + secret from a Google Cloud OAuth client
    (Web application) whose authorized redirect URI is `https://wzjuoluqlrwjyuyqlnyp.supabase.co/auth/v1/callback`.
 
+## Champion's colors (Phase 12)
+- `teams.color` / `alt_color` come from CFBD `/teams` (the Teams sync, 1 call); `profiles.favorite_team_id` is set by
+  the member on `/picks/team` or by an admin on `/admin/members`.
+- `getSiteTheme()` (`src/lib/theme/champion.ts`, `use cache`, 1 hour, tag `site-theme`): the latest week whose games
+  are all final and that at least half the entries have a score for; its top scorer (ties → higher season total,
+  i.e. standings order) is the champion; the theme is for the next week. That week's rule picks the base palette:
+  conference → night, underdog → arcade, else field. Score-changing admin actions and favorite-team saves call
+  `updateTag("site-theme")`; the cron's import doesn't, so automatic updates show within the hour.
+- `teamPalette()` (`src/lib/theme/palette.ts`, tested): the most colorful school color becomes the field (darkened
+  until white text reads, ≥7:1); the other color (or the field color, lightened) becomes the highlight (≥6:1
+  against black); colors that already pass are used exactly; no colorful color → default green. Special weeks keep
+  their own field and panels and take only the highlights.
+- The root layout injects `:root{…}` overrides; `globals.css` holds the default field palette, which must match
+  `PALETTES.field`.
+- Dev tip: `use cache` survives code edits in `next dev`; a hard refresh (`Cache-Control: no-cache`) skips it.
+
 ## Data model
 
 Source of truth: `supabase/migrations/`. Summary:
@@ -228,4 +244,4 @@ stat-source differences (CFBD's box score vs. what was hand-entered), not scorin
 | 9 | Scheduling: Supabase `pg_cron` → sync endpoint (Vercel Hobby cron is daily only) | ✅ done — `/api/cron`, daily + Saturday-evening runs |
 | 10 | Multi-user: Supabase Auth (Google + email code), invite links, roles, app-vs-sheet picks | ✅ done — Google and email-code sign-in verified in production |
 | 11 | Retro gridiron theme: field background, scoreboard panels, pixel headings (Press Start 2P) + IBM Plex Mono | ✅ done — palettes in `globals.css` (`field` default; `night`, `arcade` via `data-palette` on `<html>`) |
-| 12 | Champion's colors: each member's favorite team; last week's top scorer (tie → higher season total) sets next week's palette; special weeks use night/arcade | planned |
+| 12 | Champion's colors: each member's favorite team; last week's top scorer (tie → higher season total) sets next week's palette; special weeks use night/arcade | ✅ built — `/picks/team`, team field on `/admin/members`, home banner |

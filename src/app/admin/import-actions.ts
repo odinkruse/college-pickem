@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { THEME_TAG } from "@/lib/theme/champion";
 import { requireAdmin } from "@/lib/auth";
 import { matchCellText, runImport, saveImportOverride } from "@/lib/import/league-import";
 import { changePick, undoPickChange } from "@/lib/import/manual-pick";
@@ -27,6 +28,7 @@ function yearOf(form: FormData) {
 function refresh() {
   revalidatePath("/admin", "layout");
   revalidatePath("/picks", "layout");
+  updateTag(THEME_TAG); // scores changed: maybe a new champion
   revalidatePath("/standings", "layout");
 }
 

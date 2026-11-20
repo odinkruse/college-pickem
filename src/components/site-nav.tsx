@@ -20,6 +20,9 @@ export async function SiteNav() {
           <Link href="/picks/season" className={link}>
             Season
           </Link>
+          <Link href="/picks/team" className={link}>
+            My team
+          </Link>
         </>
       )}
       {viewer?.isAdmin && (
@@ -30,7 +33,6 @@ export async function SiteNav() {
       <span className="ml-auto flex items-center gap-3">
         {viewer ? (
           <>
-            <span className="hidden text-muted-foreground sm:inline">{viewer.displayName ?? "Signed in"}</span>
             <form action={signOutAction}>
               <button type="submit" className={link}>
                 Sign out

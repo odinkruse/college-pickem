@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { THEME_TAG } from "@/lib/theme/champion";
 import { requireAdmin } from "@/lib/auth";
 import { parseManualSpread, parseManualStats, parseNewPlayer, parseOverride } from "@/lib/admin/forms";
 import {
@@ -35,6 +36,7 @@ async function run(write: () => Promise<string>): Promise<FormState> {
     const message = await write();
     revalidatePath("/admin", "layout");
     revalidatePath("/picks", "layout");
+    updateTag(THEME_TAG); // scores changed: maybe a new champion
     return { ok: true, message };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : String(e) };
