@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
+import { PLAYER_STATS_TAG } from "@/lib/stats/player-stats";
 import { THEME_TAG } from "@/lib/theme/champion";
 import { requireAdmin } from "@/lib/auth";
 import { matchCellText, runImport, saveImportOverride } from "@/lib/import/league-import";
@@ -29,6 +30,7 @@ function refresh() {
   revalidatePath("/admin", "layout");
   revalidatePath("/picks", "layout");
   updateTag(THEME_TAG); // scores changed: maybe a new champion
+  updateTag(PLAYER_STATS_TAG);
   revalidatePath("/standings", "layout");
 }
 

@@ -12,6 +12,9 @@ export async function SiteNav() {
       <Link href="/standings" className={link}>
         Standings
       </Link>
+      <Link href="/stats" className={link}>
+        Stats
+      </Link>
       {viewer?.profileId && (
         <>
           <Link href="/picks" className={link}>

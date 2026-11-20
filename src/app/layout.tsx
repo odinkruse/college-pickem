@@ -41,7 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <ThemeStyle />
         </Suspense>
         <header className="border-b-4 border-primary bg-card">
-          <nav className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 font-pixel text-[10px]">
+          <nav className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 font-pixel text-[10px]">
             <Link href="/" className="text-xs text-primary no-underline">
               <span className="hidden sm:inline">College </span>Pick&apos;em
             </Link>

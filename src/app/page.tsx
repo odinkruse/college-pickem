@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Countdown } from "@/components/countdown";
+import { StatsSidebar } from "@/components/player-stats";
 import { SpecialWeekBanner } from "@/components/special-week";
 import { StandingsTable } from "@/components/standings-table";
 import { buttonVariants } from "@/components/ui/button";
@@ -11,33 +12,54 @@ import { getViewer } from "@/lib/auth";
 import { seasonYearFor } from "@/lib/cfbd";
 import { seasonWeeks } from "@/lib/season";
 import { loadStandings } from "@/lib/standings";
+import { loadPlayerStats } from "@/lib/stats/player-stats";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { must } from "@/lib/supabase/helpers";
 import { getSiteTheme } from "@/lib/theme/champion";
 
-// Public home page: this week's scoreboard, then the leaderboard.
+// Public home page: this week's scoreboard and the leaderboard, with player stats alongside on
+// desktop (below on phones).
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-8">
-      <Suspense fallback={null}>
-        <ChampionBanner />
-      </Suspense>
-      <Suspense fallback={<section className="panel h-56" aria-label="Loading this week" />}>
-        <Scoreboard />
-      </Suspense>
-      <YardLines />
-      <Suspense fallback={<p className="font-pixel text-[10px]">Loading standings…</p>}>
-        <Leaderboard />
-      </Suspense>
+    <main className="mx-auto grid w-full max-w-6xl flex-1 items-start gap-8 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="flex min-w-0 flex-col gap-8">
+        <Suspense fallback={null}>
+          <ChampionBanner />
+        </Suspense>
+        <Suspense fallback={<section className="panel h-56" aria-label="Loading this week" />}>
+          <Scoreboard />
+        </Suspense>
+        <YardLines />
+        <Suspense fallback={<p className="font-pixel text-[10px]">Loading standings…</p>}>
+          <Leaderboard />
+        </Suspense>
+      </div>
+      <aside className="min-w-0">
+        <Suspense fallback={<section className="panel h-96" aria-label="Loading player stats" />}>
+          <Sidebar />
+        </Suspense>
+      </aside>
     </main>
   );
 }
 
-/** Whose colors the site is wearing this week, and why. */
+async function Sidebar() {
+  await connection();
+  const stats = await loadPlayerStats(seasonYearFor(new Date()));
+  return stats ? <StatsSidebar stats={stats} /> : null;
+}
+
+/** Whose colors the site is wearing, and why. */
 async function ChampionBanner() {
   const { champion, week } = await getSiteTheme();
-  if (!champion || week === null) return null;
+  if (!champion) return null;
   const { team } = champion;
+  const eyebrow =
+    champion.kind === "week" ? `Week ${week} colors` : week !== null ? `Week ${week} · defending champion` : `${champion.season} champion`;
+  const story =
+    champion.kind === "week"
+      ? `${champion.name} put up ${champion.points} in week ${champion.week}`
+      : `${champion.name} won the ${champion.season} season with ${champion.points} points`;
   return (
     <section className="panel flex items-center gap-4 p-4 sm:p-5">
       {team?.logoUrl && (
@@ -45,10 +67,10 @@ async function ChampionBanner() {
         <img src={team.logoUrl} alt="" width={56} height={56} className="size-12 shrink-0 object-contain sm:size-14" />
       )}
       <div className="flex min-w-0 flex-col gap-1.5">
-        <p className="font-pixel text-[9px] text-accent">Week {week} colors</p>
-        <p className="font-pixel text-sm leading-relaxed text-primary sm:text-base">{team ? team.school : "Champion"}</p>
+        <p className="font-pixel text-[9px] text-accent">{eyebrow}</p>
+        <p className="font-pixel text-sm leading-relaxed text-primary sm:text-base">{team ? team.school : champion.name}</p>
         <p className="text-sm text-muted-foreground">
-          {champion.name} put up {champion.points} in week {champion.week}
+          {story}
           {team ? "." : ", but hasn't picked a favorite team yet."}
         </p>
       </div>

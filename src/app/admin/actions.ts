@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
+import { PLAYER_STATS_TAG } from "@/lib/stats/player-stats";
 import { THEME_TAG } from "@/lib/theme/champion";
 import { getViewer } from "@/lib/auth";
 import { resolveReview } from "@/lib/picks/scoring";
@@ -49,6 +50,7 @@ export async function syncAction(_prev: SyncActionState, formData: FormData): Pr
   revalidatePath("/admin");
   revalidatePath("/picks", "layout");
   updateTag(THEME_TAG); // scores changed: maybe a new champion
+  updateTag(PLAYER_STATS_TAG);
   return { ok: results.every((r) => r.ok), lines: results.map((r) => describe(r, week)) };
 }
 
@@ -70,6 +72,7 @@ export async function resolveReviewAction(pickId: number, played: boolean): Prom
     revalidatePath("/admin");
     revalidatePath("/picks", "layout");
     updateTag(THEME_TAG); // scores changed: maybe a new champion
+    updateTag(PLAYER_STATS_TAG);
     return summary.failed.length ? { ok: false, error: summary.failed.join("; ") } : { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };

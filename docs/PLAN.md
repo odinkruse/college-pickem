@@ -163,6 +163,16 @@ sheet has text in that cell) and a scoring-sheet comparison on `/admin/import` (
 - Did-not-play in Josh's sheet: he blanks the cell, so the import has no pick for that slot and the player
   stays unused. The admin review queue is only for picks still in the sheet whose player has no stat line.
 
+## Player stats and defending champion (Phase 14)
+- `loadPlayerStats(year)` (`src/lib/stats/player-stats.ts`, `use cache` 1 hour, tag `player-stats`): every
+  FBS/FCS skill player's box-score lines in league weeks 1–last week, scored with the season's rules; the
+  pure `playerLeaders()` ranks season totals (top 3 per slot overall, top 5 per slot per division) and best
+  single games. "Picked" = league entries that picked him this season. ~30k rows, ~12 s uncached.
+- Home page: two columns on desktop (sidebar: best game + top 3 per position), stacked on phones. `/stats`:
+  the same leaders plus six expandable FBS/FCS cards.
+- Theme: once the last week is final, the season champion's colors (offseason), and in the next season's
+  week 1, before any week is final, the same "defending champion".
+
 ## Data model
 
 Source of truth: `supabase/migrations/`. Summary:
@@ -263,3 +273,5 @@ stat-source differences (CFBD's box score vs. what was hand-entered), not scorin
 | 11 | Retro gridiron theme: field background, scoreboard panels, pixel headings (Press Start 2P) + IBM Plex Mono | ✅ done — palettes in `globals.css` (`field` default; `night`, `arcade` via `data-palette` on `<html>`) |
 | 12 | Champion's colors: each member's favorite team; last week's top scorer (tie → higher season total) sets next week's palette; special weeks use night/arcade | ✅ built — `/picks/team`, team field on `/admin/members`, home banner |
 | 13 | Season end: 14-week season (`league_seasons.last_week`), FCS playoff games in weeks 13–14, Championship week (week 14: anyone playing, used or not), special-week banners | ✅ built |
+| 14 | Player stats (`/stats`, home sidebar) and defending-champion colors | ✅ built |
+| 15 | New season: keep showing the finished season until the next one is set up (today the calendar flips the site to the new year on March 1); a "Start a new season" admin page (sheet link, last week, special weeks, members carried over) | planned |
