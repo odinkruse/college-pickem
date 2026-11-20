@@ -1,12 +1,13 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getViewer } from "@/lib/auth";
 import { seasonYearFor } from "@/lib/cfbd";
 import { StandingsTable } from "@/components/standings-table";
 import { loadStandings } from "@/lib/standings";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// League standings. Public (not behind the password): it shows only names and points, the same
+// League standings. Public (no sign-in needed): it shows only names and points, the same
 // things the league's own sheet shows. Individual picks appear only once their game has kicked off.
 export default function StandingsPage() {
   return (
@@ -21,22 +22,22 @@ export default function StandingsPage() {
 async function Standings() {
   await connection();
   const year = seasonYearFor(new Date());
-  const { rows, weeks } = await loadStandings(createAdminClient(), year);
+  const [{ rows, weeks }, viewer] = await Promise.all([loadStandings(createAdminClient(), year), getViewer()]);
   const lastWeek = weeks.at(-1);
   const best = (week: number) => Math.max(...rows.map((r) => r.byWeek.get(week) ?? -Infinity));
 
   return (
     <>
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Standings</h1>
+        <h1 className="text-xl sm:text-2xl">Standings</h1>
         <p className="text-sm text-muted-foreground">
           {year} season · {rows.length} entries · {weeks.length ? `through week ${lastWeek}` : "no scores yet"}
         </p>
       </header>
 
-      <Card>
-        <CardContent className="overflow-x-auto">
-          <StandingsTable rows={rows} lastWeek={lastWeek} />
+      <Card className="py-0">
+        <CardContent className="overflow-x-auto px-0">
+          <StandingsTable rows={rows} lastWeek={lastWeek} youProfileId={viewer?.profileId} />
         </CardContent>
       </Card>
 
@@ -64,7 +65,7 @@ async function Standings() {
                     {weeks.map((w) => {
                       const pts = r.byWeek.get(w);
                       return (
-                        <td key={w} className={`px-2 py-1.5 text-right ${pts !== undefined && pts === best(w) ? "font-semibold text-primary" : ""}`}>
+                        <td key={w} className={`px-2 py-1.5 text-right ${pts !== undefined && pts === best(w) ? "font-bold text-primary" : ""}`}>
                           {pts ?? "–"}
                         </td>
                       );
@@ -73,7 +74,7 @@ async function Standings() {
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-xs text-muted-foreground">Bold: the week&apos;s top score.</p>
+            <p className="mt-2 text-xs text-muted-foreground">Gold: the week&apos;s top score.</p>
           </CardContent>
         </Card>
       )}

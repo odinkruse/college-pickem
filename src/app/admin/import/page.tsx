@@ -80,7 +80,7 @@ async function ImportContent({ searchParams }: { searchParams: PageProps<"/admin
   return (
     <>
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Import picks</h1>
+        <h1 className="text-xl sm:text-2xl">Import picks</h1>
         <p className="text-sm text-muted-foreground">
           {year} season · from{" "}
           {sheetId ? (

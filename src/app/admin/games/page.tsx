@@ -68,7 +68,7 @@ async function WeekGames({ searchParams }: { searchParams: PageProps<"/admin/gam
     <>
       <header className="flex flex-col gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Week {week} games</h1>
+          <h1 className="text-xl sm:text-2xl">Week {week} games</h1>
           <p className="text-sm text-muted-foreground">
             {year} season · {games.length} shown · a manual line overrides CFBD&apos;s for Underdog week
           </p>
@@ -113,7 +113,7 @@ async function WeekGames({ searchParams }: { searchParams: PageProps<"/admin/gam
                 <div className="text-sm text-muted-foreground">{g.completed ? "Final" : formatKickoff(g.kickoff_at, g.start_time_tbd)}</div>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className={g.spreadHome === null ? "text-amber-600 dark:text-amber-400" : ""}>
+                <span className={g.spreadHome === null ? "text-warning" : ""}>
                   {describeLine(g.spreadHome, g.home.school, g.away.school)}
                 </span>
                 {g.manual && <Badge variant="secondary">manual</Badge>}

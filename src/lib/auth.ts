@@ -1,4 +1,5 @@
 import "server-only";
+import { connection } from "next/server";
 import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAuthClient } from "@/lib/supabase/server";
@@ -18,8 +19,11 @@ export type Viewer = {
 /**
  * Who is making this request, or null if signed out. `getClaims()` verifies the session JWT in the
  * cookie (with Supabase's signing keys), so the result can be trusted. Cached per request.
+ * Checking the token's expiry reads the clock, which Cache Components only allows once the render is
+ * known to be for a real request, hence `connection()` first (cookies alone don't count).
  */
 export const getViewer = cache(async (): Promise<Viewer | null> => {
+  await connection();
   const supabase = await createAuthClient();
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;

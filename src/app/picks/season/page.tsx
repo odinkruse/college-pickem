@@ -45,7 +45,7 @@ async function SeasonSummary() {
     <>
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{year} season</h1>
+          <h1 className="text-xl sm:text-2xl">{year} season</h1>
           <p className="text-sm text-muted-foreground">
             {used.length} players used · {picks.filter((p) => p.status === "final").length} picks scored
           </p>
@@ -158,7 +158,7 @@ function PickResult({ pick }: { pick: SeasonPick }) {
   return (
     <span className="tabular-nums" title={pick.reviewReason ?? undefined}>
       {pick.points}
-      {pick.reviewReason && <span className="text-amber-600 dark:text-amber-400">*</span>}
+      {pick.reviewReason && <span className="text-warning">*</span>}
     </span>
   );
 }

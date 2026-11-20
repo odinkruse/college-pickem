@@ -57,7 +57,7 @@ async function Players({ searchParams }: { searchParams: PageProps<"/admin/playe
   return (
     <>
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Players</h1>
+        <h1 className="text-xl sm:text-2xl">Players</h1>
         <p className="text-sm text-muted-foreground">
           {year} season · positions decide which slot a player can fill (QB · RB/FB · WR/TE). An override survives roster syncs.
         </p>

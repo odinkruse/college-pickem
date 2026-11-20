@@ -17,7 +17,7 @@ async function MemberGate({ children }: { children: React.ReactNode }) {
   if (!viewer.profileId) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-2 px-4 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight">Almost there</h1>
+        <h1 className="text-lg sm:text-xl">Almost there</h1>
         <p className="text-muted-foreground">
           You&apos;re signed in as {viewer.email}, but this login isn&apos;t linked to a league entry yet. Open the invite link you were sent
           (ask the commissioner if you don&apos;t have one).

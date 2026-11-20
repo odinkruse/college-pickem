@@ -40,7 +40,7 @@ async function Members() {
   return (
     <>
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Members</h1>
+        <h1 className="text-xl sm:text-2xl">Members</h1>
         <p className="text-sm text-muted-foreground">
           {members.length} members · {linked} signed in. Send each person their own invite link: they sign in (Google or an emailed code),
           then the link ties that login to their entry. Each link works once.

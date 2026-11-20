@@ -38,7 +38,7 @@ async function EntryPicks({ params }: { params: PageProps<"/standings/[entry]">[
           <Link href="/standings" className="text-sm text-muted-foreground hover:underline">
             ← Standings
           </Link>
-          <h1 className="text-3xl font-semibold tracking-tight">{data.name}</h1>
+          <h1 className="text-xl sm:text-2xl">{data.name}</h1>
           <p className="text-sm text-muted-foreground">{data.year} season</p>
         </div>
         <div className="text-right">

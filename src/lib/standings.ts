@@ -12,6 +12,7 @@ const LEAGUE_SLUG = "main";
 
 export type StandingsRow = {
   entryId: number;
+  profileId: string;
   name: string;
   rank: number;
   total: number;
@@ -23,7 +24,7 @@ export async function loadStandings(db: Db, year: number): Promise<{ rows: Stand
   const entries = must(
     await db
       .from("entries")
-      .select("id, profiles(display_name), leagues!inner(slug), seasons!inner(year)")
+      .select("id, profile_id, profiles(display_name), leagues!inner(slug), seasons!inner(year)")
       .eq("leagues.slug", LEAGUE_SLUG)
       .eq("seasons.year", year),
     "load entries",
@@ -46,7 +47,7 @@ export async function loadStandings(db: Db, year: number): Promise<{ rows: Stand
       bySlot[p.slot] += p.points!;
       byWeek.set(p.week, (byWeek.get(p.week) ?? 0) + p.points!);
     }
-    return { entryId: e.id, name: e.profiles.display_name, rank: 0, total: bySlot.QB + bySlot.RB + bySlot.WRTE, bySlot, byWeek };
+    return { entryId: e.id, profileId: e.profile_id, name: e.profiles.display_name, rank: 0, total: bySlot.QB + bySlot.RB + bySlot.WRTE, bySlot, byWeek };
   });
 
   rows.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));

@@ -8,8 +8,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-mono: var(--font-plex-mono);
+  --font-heading: var(--font-press-start);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,83 +48,148 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+/* Retro gridiron theme. One dark palette for the whole site: the page is a striped field, content
+   sits on near-black "scoreboard" panels with thick black outlines and hard shadows.
+   Palettes: field (default), night and arcade, picked by data-palette on <html>. */
+@theme inline {
+  --font-pixel: var(--font-press-start);
+  --color-field: var(--background);
+  --color-field-2: var(--field-2);
+  --color-warning: var(--warning);
+  --color-outline: var(--outline);
+  --shadow-pixel: 6px 6px 0 var(--outline);
+  --shadow-pixel-sm: 3px 3px 0 var(--outline);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+:root {
+  --font-sans: var(--font-plex-mono);
+  --radius: 0rem;
+  --outline: #000000;
+
+  --background: #1d6b34;
+  --field-2: #237a3d;
+  --foreground: #ffffff;
+  --card: #0d110e;
+  --card-foreground: #ffffff;
+  --popover: #0d110e;
+  --popover-foreground: #ffffff;
+  --primary: #ffd23f;
+  --primary-foreground: #000000;
+  --secondary: #1f2a22;
+  --secondary-foreground: #ffffff;
+  --muted: #1f2a22;
+  --muted-foreground: #cfe3d3;
+  --accent: #ff7a3d;
+  --accent-foreground: #000000;
+  --destructive: #ff6b6b;
+  --warning: #ffb547;
+  --border: #34433a;
+  --input: #4a5d50;
+  --ring: #ffd23f;
+  --chart-1: #ffd23f;
+  --chart-2: #ff7a3d;
+  --chart-3: #5fd4ff;
+  --chart-4: #cfe3d3;
+  --chart-5: #8fbf9a;
+  --sidebar: #0d110e;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ffd23f;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #1f2a22;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #34433a;
+  --sidebar-ring: #ffd23f;
+}
+
+:root[data-palette="night"] {
+  --background: #10204a;
+  --field-2: #142757;
+  --card: #070a14;
+  --popover: #070a14;
+  --primary: #5fd4ff;
+  --secondary: #1a2340;
+  --muted: #1a2340;
+  --muted-foreground: #c3cfea;
+  --accent: #ffa62b;
+  --border: #2c3858;
+  --input: #46557a;
+  --ring: #5fd4ff;
+  --sidebar: #070a14;
+  --sidebar-primary: #5fd4ff;
+  --sidebar-ring: #5fd4ff;
+}
+
+:root[data-palette="arcade"] {
+  --background: #2a0f3b;
+  --field-2: #331248;
+  --card: #0b0612;
+  --popover: #0b0612;
+  --primary: #3dff8f;
+  --secondary: #261835;
+  --muted: #261835;
+  --muted-foreground: #dcc7e8;
+  --accent: #ff5ad9;
+  --border: #3f2c55;
+  --input: #5b4475;
+  --ring: #3dff8f;
+  --sidebar: #0b0612;
+  --sidebar-primary: #3dff8f;
+  --sidebar-ring: #3dff8f;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
+    color-scheme: dark;
   }
+  body {
+    @apply text-foreground;
+    background-color: var(--background);
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--background) 0 160px,
+      var(--field-2) 160px 320px
+    );
+  }
+  /* The pixel font has a single weight: never fake a bold. */
+  h1,
+  h2 {
+    font-family: var(--font-pixel);
+    font-weight: 400;
+    font-synthesis: none;
+    text-transform: uppercase;
+    line-height: 1.5;
+    letter-spacing: 0;
+  }
+  h1 {
+    text-shadow: 3px 3px 0 var(--outline);
+  }
+  select {
+    border-radius: 0;
+    background-color: var(--card);
+    color: var(--foreground);
+  }
+  a {
+    text-underline-offset: 4px;
+  }
+}
+
+@utility font-pixel {
+  font-family: var(--font-pixel);
+  font-weight: 400;
+  font-synthesis: none;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+/* A near-black panel with a thick outline and a hard drop shadow. */
+@utility panel {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border: 4px solid var(--outline);
+  box-shadow: 6px 6px 0 var(--outline);
 }

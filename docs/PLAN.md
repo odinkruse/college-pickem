@@ -123,9 +123,10 @@ sheet has text in that cell) and a scoring-sheet comparison on `/admin/import` (
 ### One-time Supabase dashboard setup
 1. Authentication → URL Configuration: Site URL `https://college-pickem-phi.vercel.app`; Redirect URLs
    `https://college-pickem-phi.vercel.app/auth/callback` and `http://localhost:3000/auth/callback`.
-2. Authentication → Emails → Templates: "Magic link" and "Confirm signup" bodies must contain `{{ .Token }}`.
-3. Authentication → Emails → SMTP Settings: `smtp.gmail.com`, port 465, the Gmail address as username and
-   sender, a Gmail **app password** (needs 2-Step Verification on that account).
+2. Authentication → Emails → SMTP Settings: `smtp.gmail.com`, port 465, the Gmail address as username and
+   sender, a Gmail **app password** (needs 2-Step Verification on that account). Do this before the
+   templates: Supabase locks template editing until custom SMTP is on.
+3. Authentication → Emails → Templates: "Magic link" and "Confirm signup" bodies must contain `{{ .Token }}`.
 4. Authentication → Sign In / Providers → Google: client ID + secret from a Google Cloud OAuth client
    (Web application) whose authorized redirect URI is `https://wzjuoluqlrwjyuyqlnyp.supabase.co/auth/v1/callback`.
 
@@ -225,4 +226,6 @@ stat-source differences (CFBD's box score vs. what was hand-entered), not scorin
 | 7 | Manual overrides admin | ✅ done — `/admin/games`, `/admin/games/[id]`, `/admin/players` |
 | 8 | League pick import (Josh's sheet) + standings — backfill 2026 for testing | ✅ done — `/admin/import`, `/standings`; weeks 1–10 imported |
 | 9 | Scheduling: Supabase `pg_cron` → sync endpoint (Vercel Hobby cron is daily only) | ✅ done — `/api/cron`, daily + Saturday-evening runs |
-| 10 | Multi-user: Supabase Auth (Google + email code), invite links, roles, app-vs-sheet picks | ✅ built — needs the dashboard setup above |
+| 10 | Multi-user: Supabase Auth (Google + email code), invite links, roles, app-vs-sheet picks | ✅ done — Google and email-code sign-in verified in production |
+| 11 | Retro gridiron theme: field background, scoreboard panels, pixel headings (Press Start 2P) + IBM Plex Mono | ✅ done — palettes in `globals.css` (`field` default; `night`, `arcade` via `data-palette` on `<html>`) |
+| 12 | Champion's colors: each member's favorite team; last week's top scorer (tie → higher season total) sets next week's palette; special weeks use night/arcade | planned |

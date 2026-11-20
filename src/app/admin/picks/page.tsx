@@ -77,7 +77,7 @@ async function MemberPicks({ searchParams }: { searchParams: PageProps<"/admin/p
     <>
       <header className="flex flex-col gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Member picks</h1>
+          <h1 className="text-xl sm:text-2xl">Member picks</h1>
           <p className="text-sm text-muted-foreground">
             Change anyone&apos;s pick after the fact, e.g. a swap announced by email. The change sticks through later imports until that
             cell is edited in the sheet.
@@ -137,7 +137,7 @@ async function MemberPicks({ searchParams }: { searchParams: PageProps<"/admin/p
                   {pick && (
                     <span className="tabular-nums">
                       {pick.status === "dnp" ? "DNP" : pick.points !== null ? `${pick.points} pts` : pick.status}
-                      {pick.review_reason && <span className="text-amber-600 dark:text-amber-400"> · review</span>}
+                      {pick.review_reason && <span className="text-warning"> · review</span>}
                     </span>
                   )}
                 </div>

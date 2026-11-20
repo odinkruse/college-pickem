@@ -108,7 +108,7 @@ async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin"
     <>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Admin</h1>
+          <h1 className="text-xl sm:text-2xl">Admin</h1>
           <p className="text-muted-foreground">
             {year} season ·{" "}
             {quota

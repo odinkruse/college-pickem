@@ -122,7 +122,7 @@ async function GameDetail({
         <Link href={`/admin/games?week=${game.week}`} className="text-sm text-muted-foreground hover:underline">
           ← Week {game.week} games
         </Link>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+        <h1 className="mt-1 text-lg sm:text-xl">
           {game.away.school} @ {game.home.school}
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -206,7 +206,7 @@ async function GameDetail({
                   <span className="text-muted-foreground">
                     · {SLOT_LABEL[p.slot]} · {p.entries.profiles.display_name}
                   </span>
-                  {p.review_reason && <div className="text-amber-600 dark:text-amber-400">Under review</div>}
+                  {p.review_reason && <div className="text-warning">Under review</div>}
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">{p.status === "final" ? `${p.points} pts` : p.status}</Badge>

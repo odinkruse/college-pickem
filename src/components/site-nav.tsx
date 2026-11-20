@@ -2,7 +2,7 @@ import Link from "next/link";
 import { signOutAction } from "@/app/login/actions";
 import { getViewer } from "@/lib/auth";
 
-const link = "text-muted-foreground hover:text-foreground";
+const link = "py-2 uppercase text-foreground hover:text-primary";
 
 /** The header's links depend on who is signed in, so this renders inside a Suspense boundary. */
 export async function SiteNav() {
@@ -30,7 +30,7 @@ export async function SiteNav() {
       <span className="ml-auto flex items-center gap-3">
         {viewer ? (
           <>
-            <span className="hidden text-muted-foreground sm:inline">{viewer.displayName ?? viewer.email}</span>
+            <span className="hidden text-muted-foreground sm:inline">{viewer.displayName ?? "Signed in"}</span>
             <form action={signOutAction}>
               <button type="submit" className={link}>
                 Sign out
