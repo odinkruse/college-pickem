@@ -1,7 +1,7 @@
 import { Suspense } from "react";
+import { currentSeasonYear } from "@/lib/season";
 import { connection } from "next/server";
 import { BestGame, DIVISION_LABEL, LeaderList, STAT_SLOT_LABEL, STAT_SLOTS } from "@/components/player-stats";
-import { seasonYearFor } from "@/lib/cfbd";
 import type { Division } from "@/lib/stats/leaders";
 import { loadPlayerStats } from "@/lib/stats/player-stats";
 
@@ -20,7 +20,7 @@ const DIVISIONS: Division[] = ["fbs", "fcs"];
 
 async function Stats() {
   await connection();
-  const year = seasonYearFor(new Date());
+  const year = await currentSeasonYear();
   const stats = await loadPlayerStats(year);
   if (!stats) return <p className="font-pixel text-[10px]">No stats yet for {year}.</p>;
 

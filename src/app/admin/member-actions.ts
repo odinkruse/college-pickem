@@ -1,9 +1,9 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
+import { currentSeasonYear } from "@/lib/season";
 import { revalidatePath, updateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
-import { seasonYearFor } from "@/lib/cfbd";
 import { findTeam, loadTeamOptions } from "@/lib/teams";
 import { THEME_TAG } from "@/lib/theme/champion";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -82,7 +82,7 @@ export async function addMemberAction(_prev: FormState, form: FormData): Promise
     if (name.length < 2 || name.length > 40) throw new Error("Enter a name (2–40 characters).");
     const db = createAdminClient();
     const league = await leagueId(db);
-    const season = must(await db.from("seasons").select("id").eq("year", seasonYearFor(new Date())).single(), "load season");
+    const season = must(await db.from("seasons").select("id").eq("year", await currentSeasonYear()).single(), "load season");
     const profile = must(await db.from("profiles").insert({ display_name: name }).select("id").single(), "add profile");
     ok(await db.from("league_members").insert({ league_id: league, profile_id: profile.id }), "add to league");
     ok(await db.from("entries").insert({ league_id: league, season_id: season.id, profile_id: profile.id }), "create entry");
@@ -90,15 +90,24 @@ export async function addMemberAction(_prev: FormState, form: FormData): Promise
   });
 }
 
-/** Sets a member's favorite team by school name (blank clears it), e.g. for members who haven't signed in. */
-export async function setMemberTeamAction(_prev: FormState, form: FormData): Promise<FormState> {
+/** Saves a member's favorite team (by school name; blank clears it) and contact details. */
+export async function setMemberDetailsAction(_prev: FormState, form: FormData): Promise<FormState> {
   return run(async () => {
     await requireAdmin();
     const typed = String(form.get("team") ?? "").trim();
-    const team = typed ? findTeam(await loadTeamOptions(seasonYearFor(new Date())), typed) : undefined;
+    const email = String(form.get("email") ?? "").trim();
+    const phone = String(form.get("phone") ?? "").trim();
+    const team = typed ? findTeam(await loadTeamOptions(await currentSeasonYear()), typed) : undefined;
     if (typed && !team) return { ok: false, message: `No FBS/FCS school called "${typed}". Pick one from the list.` };
-    ok(await createAdminClient().from("profiles").update({ favorite_team_id: team?.id ?? null }).eq("id", String(form.get("profile"))), "save favorite team");
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: `"${email}" isn't an email address.` };
+    ok(
+      await createAdminClient()
+        .from("profiles")
+        .update({ favorite_team_id: team?.id ?? null, contact_email: email || null, phone: phone || null })
+        .eq("id", String(form.get("profile"))),
+      "save member",
+    );
     updateTag(THEME_TAG);
-    return done(team ? `Favorite team: ${team.school}.` : "Favorite team cleared.");
+    return done("Saved.");
   });
 }

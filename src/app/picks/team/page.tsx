@@ -1,10 +1,10 @@
 import { Suspense } from "react";
+import { currentSeasonYear } from "@/lib/season";
 import { connection } from "next/server";
 import { ActionForm } from "@/app/admin/action-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getViewer } from "@/lib/auth";
-import { seasonYearFor } from "@/lib/cfbd";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadTeamOptions } from "@/lib/teams";
 import { teamPalette, type ThemeVars } from "@/lib/theme/palette";
@@ -30,7 +30,7 @@ async function MyTeam() {
   const viewer = (await getViewer())!;
   const db = createAdminClient();
   const [options, profile] = await Promise.all([
-    loadTeamOptions(seasonYearFor(new Date())),
+    loadTeamOptions(await currentSeasonYear()),
     db.from("profiles").select("favorite_team_id, teams(school, logo_url, color, alt_color)").eq("id", viewer.profileId!).single(),
   ]);
   const team = profile.data?.teams ?? null;

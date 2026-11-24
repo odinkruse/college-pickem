@@ -254,6 +254,7 @@ export type Database = {
           pick_sheet_id: string | null
           scoring_sheet_id: string | null
           season_id: number
+          started_at: string | null
         }
         Insert: {
           last_week?: number
@@ -261,6 +262,7 @@ export type Database = {
           pick_sheet_id?: string | null
           scoring_sheet_id?: string | null
           season_id: number
+          started_at?: string | null
         }
         Update: {
           last_week?: number
@@ -268,6 +270,7 @@ export type Database = {
           pick_sheet_id?: string | null
           scoring_sheet_id?: string | null
           season_id?: number
+          started_at?: string | null
         }
         Relationships: [
           {
@@ -623,27 +626,33 @@ export type Database = {
       profiles: {
         Row: {
           auth_user_id: string | null
+          contact_email: string | null
           created_at: string
           display_name: string
           favorite_team_id: number | null
           id: string
           invite_code: string | null
+          phone: string | null
         }
         Insert: {
           auth_user_id?: string | null
+          contact_email?: string | null
           created_at?: string
           display_name: string
           favorite_team_id?: number | null
           id?: string
           invite_code?: string | null
+          phone?: string | null
         }
         Update: {
           auth_user_id?: string | null
+          contact_email?: string | null
           created_at?: string
           display_name?: string
           favorite_team_id?: number | null
           id?: string
           invite_code?: string | null
+          phone?: string | null
         }
         Relationships: [
           {
@@ -814,6 +823,7 @@ export type Database = {
         Returns: Json
       }
       is_game_locked: { Args: { p_game_id: number }; Returns: boolean }
+      start_season: { Args: { p: Json }; Returns: Json }
     }
     Enums: {
       classification: "fbs" | "fcs" | "ii" | "iii"

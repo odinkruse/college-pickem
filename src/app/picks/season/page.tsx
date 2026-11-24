@@ -4,10 +4,9 @@ import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getViewer } from "@/lib/auth";
-import { seasonYearFor } from "@/lib/cfbd";
 import { loadWeekContext, type SeasonPick } from "@/lib/picks/service";
 import type { Slot, WeekRule } from "@/lib/rules";
-import { seasonWeeks } from "@/lib/season";
+import { currentSeasonYear, seasonWeeks } from "@/lib/season";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { RULE_LABEL, SLOT_LABEL } from "../format";
 
@@ -27,7 +26,7 @@ const SLOTS: Slot[] = ["QB", "RB", "WRTE"];
 async function SeasonSummary() {
   await connection();
   const now = new Date();
-  const year = seasonYearFor(now);
+  const year = await currentSeasonYear();
   const db = createAdminClient();
   const { weeks, current } = await seasonWeeks(year, now);
   const viewer = (await getViewer())!;

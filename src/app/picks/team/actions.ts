@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
+import { currentSeasonYear } from "@/lib/season";
 import type { FormState } from "@/app/admin/override-actions";
 import { requireMember } from "@/lib/auth";
-import { seasonYearFor } from "@/lib/cfbd";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ok } from "@/lib/supabase/helpers";
 import { loadTeamOptions } from "@/lib/teams";
@@ -14,7 +14,7 @@ export async function setMyTeamAction(_prev: FormState, form: FormData): Promise
   try {
     const viewer = await requireMember();
     const raw = String(form.get("team") ?? "");
-    const options = await loadTeamOptions(seasonYearFor(new Date()));
+    const options = await loadTeamOptions(await currentSeasonYear());
     const team = raw ? options.find((t) => t.id === Number(raw)) : undefined;
     if (raw && !team) return { ok: false, message: "Pick a team from the list." };
 

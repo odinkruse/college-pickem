@@ -124,7 +124,8 @@ const GOLD = "#ffd23f";
  * - Primary (headings, leader row, main buttons; black text on it): the other school color if it's
  *   colorful or light, else the field color lightened; always bright enough to read on near-black.
  * - Accent (season label, "You" tag): whichever school color primary didn't use, lightened, or white.
- * Colors that already pass are used exactly. Teams with no colorful color (missing, or only black,
+ * A dark gray second color (maroon-and-gray schools) becomes silver rather than lightening the main
+ * color to pink. Colors that already pass are used exactly. Teams with no colorful color (missing, or only black,
  * white and grays) keep the default field green.
  * `base` (a special week's palette) keeps its own field and panels; only the highlight colors change.
  */
@@ -145,8 +146,12 @@ export function teamPalette(color: string | null, altColor: string | null, base:
     ...(fieldColor ? [fieldColor] : colorful),
     ...others.filter((c) => chroma(c.hsl) < 0.15),
   ];
-  const primary = highlights[0] ? bright(highlights[0]) : GOLD;
-  const accent = highlights[1] ? bright(highlights[1]) : !fieldColor ? PALETTES[base].accent : WHITE;
+  // Maroon-and-gray schools (Montana, Washington State…): lightening the main color for the highlight
+  // turns it pink, so their dark gray becomes silver instead, with white as the accent.
+  const darkGray = colors.find((c) => c !== fieldColor && chroma(c.hsl) < 0.15 && c.hsl.l > 0.15 && c.hsl.l < 0.55);
+  const silver = fieldColor && darkGray && highlights[0] === fieldColor && contrast(fieldColor.hex, BLACK) < 6;
+  const primary = silver ? hslToHex({ ...darkGray.hsl, l: 0.78 }) : highlights[0] ? bright(highlights[0]) : GOLD;
+  const accent = silver ? WHITE : highlights[1] ? bright(highlights[1]) : !fieldColor ? PALETTES[base].accent : WHITE;
 
   if (!fieldColor || base !== "field") {
     const b = PALETTES[base];

@@ -1,18 +1,18 @@
 import { Suspense } from "react";
+import { currentSeasonYear } from "@/lib/season";
 import { headers } from "next/headers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getViewer } from "@/lib/auth";
-import { seasonYearFor } from "@/lib/cfbd";
 import { loadTeamOptions } from "@/lib/teams";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { must } from "@/lib/supabase/helpers";
 import { ActionForm } from "../action-form";
 import { AdminNav } from "../admin-nav";
 import { CopyButton } from "../copy-button";
-import { addMemberAction, createInviteAction, setMemberTeamAction, setRoleAction, unlinkAction } from "../member-actions";
+import { addMemberAction, createInviteAction, setMemberDetailsAction, setRoleAction, unlinkAction } from "../member-actions";
 
 // League members: who has signed in, invite links for those who haven't, and admin roles.
 export default function MembersPage() {
@@ -31,38 +31,23 @@ async function Members() {
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
   const viewer = await getViewer();
   const db = createAdminClient();
-  const [membersResult, usersResult, teamOptions] = await Promise.all([
+  const [membersResult, usersResult, year] = await Promise.all([
     db
       .from("league_members")
-      .select("role, sheet_tab, profiles(id, display_name, auth_user_id, invite_code, teams(school)), leagues!inner(slug)")
+      .select("role, sheet_tab, profiles(id, display_name, auth_user_id, invite_code, contact_email, phone, teams(school), entries(seasons(year))), leagues!inner(slug)")
       .eq("leagues.slug", "main"),
     db.auth.admin.listUsers({ perPage: 1000 }),
-    loadTeamOptions(seasonYearFor(new Date())),
+    currentSeasonYear(db),
   ]);
+  const teamOptions = await loadTeamOptions(year);
   const members = must(membersResult, "load members").sort((a, b) => a.profiles.display_name.localeCompare(b.profiles.display_name));
   const emailOf = new Map((usersResult.data?.users ?? []).map((u) => [u.id, u.email ?? u.phone ?? "signed in"]));
   const linked = members.filter((m) => m.profiles.auth_user_id).length;
+  const playing = (m: (typeof members)[number]) => m.profiles.entries.some((e) => e.seasons.year === year);
+  const current = members.filter(playing);
+  const former = members.filter((m) => !playing(m));
 
-  return (
-    <>
-      <header>
-        <h1 className="text-xl sm:text-2xl">Members</h1>
-        <p className="text-sm text-muted-foreground">
-          {members.length} members · {linked} signed in. Send each person their own invite link: they sign in (Google or an emailed code),
-          then the link ties that login to their entry. Each link works once. Favorite teams decide the champion&apos;s colors; members can
-          also set their own under My team.
-        </p>
-      </header>
-
-      <datalist id="team-options">
-        {teamOptions.map((t) => (
-          <option key={t.id} value={t.school} />
-        ))}
-      </datalist>
-
-      <Card>
-        <CardContent className="flex flex-col divide-y">
-          {members.map((m) => {
+  const renderRow = (m: (typeof members)[number]) => {
             const p = m.profiles;
             const isSelf = p.id === viewer?.profileId;
             return (
@@ -110,7 +95,7 @@ async function Members() {
                     )}
                   </div>
                 </div>
-                <ActionForm action={setMemberTeamAction} className="flex flex-wrap items-center gap-2">
+                <ActionForm action={setMemberDetailsAction} className="flex flex-wrap items-center gap-2">
                   <input type="hidden" name="profile" value={p.id} />
                   <Input
                     name="team"
@@ -118,10 +103,19 @@ async function Members() {
                     defaultValue={p.teams?.school ?? ""}
                     placeholder="Favorite team"
                     aria-label={`${p.display_name}'s favorite team`}
-                    className="h-8 w-56"
+                    className="h-8 w-44"
                   />
+                  <Input
+                    name="email"
+                    type="email"
+                    defaultValue={p.contact_email ?? ""}
+                    placeholder="Contact email"
+                    aria-label={`${p.display_name}'s contact email`}
+                    className="h-8 w-52 min-w-0 flex-1"
+                  />
+                  <Input name="phone" type="tel" defaultValue={p.phone ?? ""} placeholder="Phone" aria-label={`${p.display_name}'s phone`} className="h-8 w-32" />
                   <Button type="submit" size="xs" variant="outline">
-                    Save team
+                    Save
                   </Button>
                 </ActionForm>
                 {!p.auth_user_id && p.invite_code && (
@@ -132,9 +126,39 @@ async function Members() {
                 )}
               </div>
             );
-          })}
+  };
+
+  return (
+    <>
+      <header>
+        <h1 className="text-xl sm:text-2xl">Members</h1>
+        <p className="text-sm text-muted-foreground">
+          {current.length} playing in {year} · {linked} signed in. Send each person their own invite link: they sign in (Google or an emailed code),
+          then the link ties that login to their entry. Each link works once. Favorite teams decide the champion&apos;s colors; members can
+          also set their own under My team.
+        </p>
+      </header>
+
+      <datalist id="team-options">
+        {teamOptions.map((t) => (
+          <option key={t.id} value={t.school} />
+        ))}
+      </datalist>
+
+      <Card>
+        <CardContent className="flex flex-col divide-y">
+          {current.map(renderRow)}
         </CardContent>
       </Card>
+
+      {former.length > 0 && (
+        <details className="panel">
+          <summary className="cursor-pointer p-4 font-pixel text-[10px] text-primary">
+            Former members ({former.length}): not playing in {year}
+          </summary>
+          <div className="flex flex-col divide-y border-t-4 border-outline px-4">{former.map(renderRow)}</div>
+        </details>
+      )}
 
       <Card>
         <CardHeader>

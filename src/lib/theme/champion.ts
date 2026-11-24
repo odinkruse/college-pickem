@@ -1,7 +1,6 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
-import { seasonYearFor } from "@/lib/cfbd";
-import { leagueLastWeek } from "@/lib/season";
+import { currentSeasonYear, leagueLastWeek } from "@/lib/season";
 import { loadStandings } from "@/lib/standings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { must } from "@/lib/supabase/helpers";
@@ -55,7 +54,7 @@ export async function getSiteTheme(): Promise<SiteTheme> {
   cacheTag(THEME_TAG);
 
   const db = createAdminClient();
-  const year = seasonYearFor(new Date());
+  const year = await currentSeasonYear();
   const [{ rows, weeks }, unfinished, lastWeek] = await Promise.all([
     loadStandings(db, year),
     db.from("games").select("week, seasons!inner(year)").eq("seasons.year", year).eq("completed", false),

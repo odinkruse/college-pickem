@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { currentSeasonYear } from "@/lib/season";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { OVERRIDE_POSITIONS } from "@/lib/admin/forms";
-import { seasonYearFor } from "@/lib/cfbd";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { must } from "@/lib/supabase/helpers";
 import { ActionForm } from "../action-form";
@@ -33,7 +33,7 @@ async function Players({ searchParams }: { searchParams: PageProps<"/admin/playe
   const params = await searchParams;
   const q = String(params.q ?? "").trim().slice(0, 60);
   const noPosition = params.nopos === "1";
-  const year = seasonYearFor(new Date());
+  const year = await currentSeasonYear();
 
   const db = createAdminClient();
   const season = must(await db.from("seasons").select("id").eq("year", year).single(), "load season");

@@ -5,10 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { seasonYearFor } from "@/lib/cfbd";
 import { compareWithScoringSheet, type Discrepancy } from "@/lib/import/compare";
 import type { ImportIssue, ImportSummary } from "@/lib/import/league-import";
-import { seasonWeeks } from "@/lib/season";
+import { currentSeasonYear, seasonWeeks } from "@/lib/season";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ActionForm } from "../action-form";
 import { AdminNav } from "../admin-nav";
@@ -53,7 +52,7 @@ async function ImportContent({ searchParams }: { searchParams: PageProps<"/admin
   await connection();
   const compare = (await searchParams).compare === "1";
   const now = new Date();
-  const year = seasonYearFor(now);
+  const year = await currentSeasonYear();
   const db = createAdminClient();
   const [{ weeks, current }, config, runsResult] = await Promise.all([
     seasonWeeks(year, now),

@@ -4,10 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { seasonYearFor } from "@/lib/cfbd";
 import { OWNER_PROFILE_ID } from "@/lib/picks/service";
 import type { Slot } from "@/lib/rules";
-import { seasonWeeks } from "@/lib/season";
+import { currentSeasonYear, seasonWeeks } from "@/lib/season";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { must } from "@/lib/supabase/helpers";
 import { ActionForm } from "../action-form";
@@ -35,7 +34,7 @@ async function MemberPicks({ searchParams }: { searchParams: PageProps<"/admin/p
   await connection();
   const params = await searchParams;
   const now = new Date();
-  const year = seasonYearFor(now);
+  const year = await currentSeasonYear();
   const db = createAdminClient();
   const [{ weeks, current }, entriesResult] = await Promise.all([
     seasonWeeks(year, now),

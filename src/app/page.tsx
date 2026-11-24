@@ -9,8 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { YardLines } from "@/components/yard-lines";
 import { getViewer } from "@/lib/auth";
-import { seasonYearFor } from "@/lib/cfbd";
-import { seasonWeeks } from "@/lib/season";
+import { currentSeasonYear, seasonWeeks } from "@/lib/season";
 import { loadStandings } from "@/lib/standings";
 import { loadPlayerStats } from "@/lib/stats/player-stats";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -45,7 +44,7 @@ export default function Home() {
 
 async function Sidebar() {
   await connection();
-  const stats = await loadPlayerStats(seasonYearFor(new Date()));
+  const stats = await loadPlayerStats(await currentSeasonYear());
   return stats ? <StatsSidebar stats={stats} /> : null;
 }
 
@@ -82,7 +81,7 @@ async function ChampionBanner() {
 async function Scoreboard() {
   await connection();
   const now = new Date();
-  const year = seasonYearFor(now);
+  const year = await currentSeasonYear();
   const [{ current }, viewer] = await Promise.all([seasonWeeks(year, now), getViewer()]);
   const db = createAdminClient();
   const [gamesResult, ruleResult] = await Promise.all([
@@ -148,7 +147,7 @@ const TOP = 10;
 
 async function Leaderboard() {
   await connection();
-  const year = seasonYearFor(new Date());
+  const year = await currentSeasonYear();
   const [{ rows, weeks }, viewer] = await Promise.all([loadStandings(createAdminClient(), year), getViewer()]);
   if (rows.length === 0) return <p className="font-pixel text-[10px]">No scores yet for {year}.</p>;
   return (

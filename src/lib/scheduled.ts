@@ -1,9 +1,8 @@
 import "server-only";
-import { seasonYearFor } from "@/lib/cfbd";
 import { runImport } from "@/lib/import/league-import";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { must } from "@/lib/supabase/helpers";
-import { leagueLastWeek } from "@/lib/season";
+import { currentSeasonYear, leagueLastWeek } from "@/lib/season";
 import { runSync } from "@/lib/sync/run";
 
 // The automatic updates, triggered by Supabase pg_cron → /api/cron. Each run works out what's needed
@@ -25,7 +24,7 @@ const HOUR = 60 * 60 * 1000;
 /** Never throws: each step is logged in sync_runs, and so is the run itself (kind "scheduled"). */
 export async function runScheduled(job: ScheduledJob, now = new Date()): Promise<string[]> {
   const db = createAdminClient();
-  const year = seasonYearFor(now);
+  const year = await currentSeasonYear();
   const steps: string[] = [];
   const run = (await db.from("sync_runs").insert({ kind: "scheduled", season_year: year, summary: { job } }).select("id").single()).data;
 

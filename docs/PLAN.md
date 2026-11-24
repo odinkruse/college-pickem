@@ -173,6 +173,20 @@ sheet has text in that cell) and a scoring-sheet comparison on `/admin/import` (
 - Theme: once the last week is final, the season champion's colors (offseason), and in the next season's
   week 1, before any week is final, the same "defending champion".
 
+## New seasons (Phase 15)
+- The current season is the latest `league_seasons` row with `started_at` set (`currentSeasonYear()`), not
+  the calendar, so a finished season stays up through the offseason. Every page, the scheduler and the
+  theme use it; the calendar is only a fallback when nothing has been started.
+- `/admin/season` (admins): year, last week, special weeks (copied from the current season), sheet links,
+  every league member with a Returning tick and editable name / contact email / phone, and rows for new
+  members. Submitting calls `start_season(jsonb)`, one transaction: the season row (scoring rules carried
+  over), league settings + special weeks, entries for returning members, and new members (profile,
+  membership with `sheet_tab` = name, entry, invite code). Optionally runs the CFBD reference syncs after.
+- Members who aren't back keep their history; `/admin/members` lists them under "Former members".
+  `profiles.contact_email` / `phone` are editable there too.
+- `/standings?year=2026` shows a past season once more than one has been started.
+- A 2027 `seasons` row already exists (created empty on 2026-11-09); `start_season` reuses it.
+
 ## Data model
 
 Source of truth: `supabase/migrations/`. Summary:
@@ -274,4 +288,4 @@ stat-source differences (CFBD's box score vs. what was hand-entered), not scorin
 | 12 | Champion's colors: each member's favorite team; last week's top scorer (tie → higher season total) sets next week's palette; special weeks use night/arcade | ✅ built — `/picks/team`, team field on `/admin/members`, home banner |
 | 13 | Season end: 14-week season (`league_seasons.last_week`), FCS playoff games in weeks 13–14, Championship week (week 14: anyone playing, used or not), special-week banners | ✅ built |
 | 14 | Player stats (`/stats`, home sidebar) and defending-champion colors | ✅ built |
-| 15 | New season: keep showing the finished season until the next one is set up (today the calendar flips the site to the new year on March 1); a "Start a new season" admin page (sheet link, last week, special weeks, members carried over) | planned |
+| 15 | New season: the site stays on the last started season (not the calendar); `/admin/season` starts the next one (settings, special weeks, returning/new members with contact details); past seasons on `/standings?year=` | ✅ built |

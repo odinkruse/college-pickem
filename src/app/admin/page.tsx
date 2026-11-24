@@ -3,8 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { seasonYearFor } from "@/lib/cfbd";
-import { seasonWeeks } from "@/lib/season";
+import { currentSeasonYear, seasonWeeks } from "@/lib/season";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ALL_SYNC_KINDS } from "@/lib/sync/run";
 import { AdminNav } from "./admin-nav";
@@ -38,7 +37,7 @@ const formatTime = (iso: string | null) => (iso ? `${timeFormat.format(new Date(
 async function AdminContent({ searchParams }: { searchParams: PageProps<"/admin">["searchParams"] }) {
   await connection();
   const params = await searchParams;
-  const currentYear = seasonYearFor(new Date());
+  const currentYear = await currentSeasonYear();
   const year = Number(params.season) || currentYear;
   const db = createAdminClient();
 

@@ -46,6 +46,15 @@ describe("teamPalette", () => {
     expect(contrast(tt.primary, "#000000")).toBeGreaterThanOrEqual(6);
   });
 
+  it("turns a dark gray second color into silver instead of lightening maroon to pink", () => {
+    const griz = teamPalette("#751d4a", "#666666"); // Montana: maroon and silver
+    expect(griz.background).toBe("#751d4a");
+    expect(griz.primary).toBe("#c7c7c7");
+    expect(griz.accent).toBe("#ffffff");
+    // A bright main color still wins over the gray (Wake Forest: old gold and black).
+    expect(teamPalette("#ceb888", "#2c2a29").primary).toBe("#ceb888");
+  });
+
   it("keeps the default field when a team has no colorful color", () => {
     expect(teamPalette("#000000", null).background).toBe(PALETTES.field.background);
     expect(teamPalette(null, null)).toEqual(PALETTES.field);
