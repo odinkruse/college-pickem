@@ -156,8 +156,9 @@ async function Leaderboard() {
         <CardTitle className="text-sm sm:text-base">Leaderboard</CardTitle>
         <span className="font-pixel text-[8px] text-muted-foreground">Through week {weeks.at(-1)}</span>
       </CardHeader>
-      <CardContent className="overflow-x-auto px-0 pt-2">
-        <StandingsTable rows={rows.slice(0, TOP)} lastWeek={weeks.at(-1)} youProfileId={viewer?.profileId} />
+      {/* Desktop: everyone, scrolling inside the card. Phones: the top 10 (and you), no inner scroll. */}
+      <CardContent className="overflow-x-auto px-0 lg:max-h-[31.5rem] lg:overflow-y-auto">
+        <StandingsTable rows={rows} lastWeek={weeks.at(-1)} youProfileId={viewer?.profileId} phoneRows={TOP} stickyHeader />
       </CardContent>
       <div className="border-t-4 border-outline px-4 py-4">
         <Link href="/standings" className="font-pixel text-[10px] text-primary">

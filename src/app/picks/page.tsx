@@ -8,7 +8,7 @@ import { loadWeekContext, pickWarnings, teamSpread, type SeasonPick, type WeekCo
 import type { Slot } from "@/lib/rules";
 import { currentSeasonYear, seasonWeeks } from "@/lib/season";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { RemovePickButton, WeekRuleSelect } from "./controls";
+import { RemovePickButton } from "./controls";
 import { SpecialWeekBanner } from "@/components/special-week";
 import { formatSpread, RULE_HINT, SLOT_LABEL } from "./format";
 import { PickDialog } from "./pick-dialog";
@@ -50,7 +50,11 @@ async function PicksWeek({ searchParams }: { searchParams: PageProps<"/picks">["
               {year} season · {ctx.games.length} games · {RULE_HINT[ctx.weekRule]}
             </p>
           </div>
-          {viewer.isAdmin ? <WeekRuleSelect year={year} week={week} rule={ctx.weekRule} /> : null}
+          {viewer.isAdmin ? (
+            <Link href="/admin/weeks" className="font-pixel text-[9px] text-muted-foreground underline-offset-4 hover:underline">
+              Edit week types ►
+            </Link>
+          ) : null}
         </div>
         <nav aria-label="Weeks" className="flex flex-wrap gap-1.5">
           {weeks.map((w) => (

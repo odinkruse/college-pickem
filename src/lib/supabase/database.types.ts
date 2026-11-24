@@ -823,7 +823,20 @@ export type Database = {
         Returns: Json
       }
       is_game_locked: { Args: { p_game_id: number }; Returns: boolean }
+      set_week_settings: { Args: { p: Json }; Returns: undefined }
       start_season: { Args: { p: Json }; Returns: Json }
+      week_summary: {
+        Args: { p_year: number }
+        Returns: {
+          completed: number
+          first_kickoff: string
+          games: number
+          last_kickoff: string
+          picks: number
+          started: number
+          week: number
+        }[]
+      }
     }
     Enums: {
       classification: "fbs" | "fcs" | "ii" | "iii"

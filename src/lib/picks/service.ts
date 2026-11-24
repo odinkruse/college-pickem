@@ -17,7 +17,7 @@ import {
   type WeekRule,
 } from "@/lib/rules";
 import type { Database } from "@/lib/supabase/database.types";
-import { must, ok } from "@/lib/supabase/helpers";
+import { must } from "@/lib/supabase/helpers";
 
 type Db = SupabaseClient<Database>;
 
@@ -366,17 +366,4 @@ export async function removePick(db: Db, ctx: WeekContext, slot: Slot): Promise<
   if (!pick) return { ok: true };
   const { error } = await db.from("picks").delete().eq("id", pick.pickId);
   return error ? { ok: false, errors: [describeDbError(error.message, error.code)] } : { ok: true };
-}
-
-/** Standard weeks have no row; special weeks get one. */
-export async function setWeekRule(db: Db, ctx: WeekContext, rule: WeekRule): Promise<void> {
-  const key = { league_id: ctx.leagueId, season_id: ctx.seasonId, week: ctx.week };
-  if (rule === "standard") {
-    ok(
-      await db.from("league_weeks").delete().eq("league_id", key.league_id).eq("season_id", key.season_id).eq("week", key.week),
-      "clear week rule",
-    );
-  } else {
-    ok(await db.from("league_weeks").upsert({ ...key, rule }, { onConflict: "league_id,season_id,week" }), "set week rule");
-  }
 }

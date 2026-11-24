@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/admin/picks", label: "Member picks" },
   { href: "/admin/import", label: "Import" },
   { href: "/admin/members", label: "Members" },
+  { href: "/admin/weeks", label: "Weeks" },
   { href: "/admin/season", label: "New season" },
 ] as const;
 

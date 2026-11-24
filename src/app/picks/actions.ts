@@ -1,17 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin, requireMember } from "@/lib/auth";
+import { requireMember } from "@/lib/auth";
 import {
   loadWeekContext,
   removePick,
   savePick,
   searchCandidates,
-  setWeekRule,
   type CandidateResult,
   type WriteResult,
 } from "@/lib/picks/service";
-import type { Slot, WeekRule } from "@/lib/rules";
+import type { Slot } from "@/lib/rules";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Server Actions for the picks page. Each one acts only on the signed-in member's own entry (the
@@ -19,7 +18,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // since anything arriving from the browser is untrusted.
 
 const SLOTS: readonly Slot[] = ["QB", "RB", "WRTE"];
-const RULES: readonly WeekRule[] = ["standard", "conference", "underdog"];
 
 async function guard(year: number, week: number) {
   const { profileId } = await requireMember();
@@ -60,14 +58,4 @@ export async function removePickAction(year: number, week: number, slot: Slot): 
   const result = await removePick(db, ctx, slot);
   if (result.ok) revalidatePath("/picks");
   return result;
-}
-
-/** League-wide week type: admins only. */
-export async function setWeekRuleAction(year: number, week: number, rule: WeekRule): Promise<void> {
-  await requireAdmin();
-  const { db, profileId } = await guard(year, week);
-  if (!RULES.includes(rule)) throw new Error("Invalid rule");
-  const ctx = await loadWeekContext(db, year, week, profileId);
-  await setWeekRule(db, ctx, rule);
-  revalidatePath("/picks");
 }

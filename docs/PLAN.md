@@ -186,6 +186,12 @@ sheet has text in that cell) and a scoring-sheet comparison on `/admin/import` (
   `profiles.contact_email` / `phone` are editable there too.
 - `/standings?year=2026` shows a past season once more than one has been started.
 - A 2027 `seasons` row already exists (created empty on 2026-11-09); `start_season` reuses it.
+- `/admin/weeks` (admins) changes the current season's special weeks and last week mid-season via
+  `set_week_settings(jsonb)` (one transaction; a week leaving a special type is set to `standard` first
+  so the reusable trigger re-marks its picks). Changing a week that has kicked off needs an extra tick;
+  the last week can't move before a week with picks. The schedule table comes from `week_summary(year)`
+  (counted in SQL: a season has 1,600+ games, over PostgREST's 1,000-row cap). This replaced the
+  admin-only week-type dropdown on `/picks`, which now links here.
 
 ## Data model
 

@@ -1,12 +1,14 @@
 // Parsing and checking the "Start a new season" form (/admin/season). Pure, so it's unit-tested; the
 // action passes the result to the start_season database function.
 
+import { parseWeekSettings, type WeekSettings } from "./week-settings";
+
 export type StartSeasonPayload = {
   year: number;
   pick_sheet_id: string | null;
   scoring_sheet_id: string | null;
   last_week: number;
-  weeks: { week: number; rule: "conference" | "underdog" | "championship" }[];
+  weeks: WeekSettings["weeks"];
   members: { profile_id: string; display_name: string; contact_email: string; phone: string; returning: boolean }[];
   new_members: { display_name: string; contact_email: string; phone: string }[];
 };
@@ -23,11 +25,6 @@ export function parseSheetId(text: string): string | null | undefined {
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const SPECIAL_WEEKS = [
-  ["conference_week", "conference", "Conference week"],
-  ["underdog_week", "underdog", "Underdog week"],
-  ["championship_week", "championship", "Championship week"],
-] as const;
 
 /**
  * Form fields: year, pick_sheet, scoring_sheet, last_week, conference_week, underdog_week,
@@ -44,26 +41,11 @@ export function parseStartSeason(form: FormData, currentYear: number): ParseResu
     errors.push(`Year must be after ${currentYear}.`);
   }
 
-  const lastWeek = Number(get("last_week"));
-  if (!Number.isInteger(lastWeek) || lastWeek < 1 || lastWeek > 20) errors.push("Last week must be between 1 and 20.");
+  const { last_week: lastWeek, weeks } = parseWeekSettings(form, errors);
 
   const sheets = { pick: parseSheetId(get("pick_sheet")), scoring: parseSheetId(get("scoring_sheet")) };
   if (sheets.pick === undefined) errors.push("The pick sheet link doesn't look like a Google Sheets link.");
   if (sheets.scoring === undefined) errors.push("The scoring sheet link doesn't look like a Google Sheets link.");
-
-  const weeks: StartSeasonPayload["weeks"] = [];
-  for (const [field, rule, label] of SPECIAL_WEEKS) {
-    const raw = get(field);
-    if (!raw) continue;
-    const week = Number(raw);
-    if (!Number.isInteger(week) || week < 1 || week > lastWeek) {
-      errors.push(`${label} must be a week from 1 to ${lastWeek}, or blank.`);
-    } else if (weeks.some((w) => w.week === week)) {
-      errors.push(`Week ${week} can only be one special week.`);
-    } else {
-      weeks.push({ week, rule });
-    }
-  }
 
   const contact = (who: string, email: string) => {
     if (email && !EMAIL.test(email)) errors.push(`${who}: "${email}" isn't an email address.`);
